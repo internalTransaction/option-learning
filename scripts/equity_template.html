@@ -71,9 +71,11 @@
     <div class="tabs" id="tabs"></div>
   </header>
   <div class="toolbar">
+    <span>策略</span>
+    <span class="rseg" id="modeSeg"><button data-m="opt" class="on">纯期权择时</button><button data-m="hv">HVWMA结合</button></span>
     <span>区间</span>
     <span class="rseg" id="rangeSeg"><button data-r="924" class="on">924以来</button><button data-r="all">全部</button></span>
-    <span style="color:var(--muted)">超额 = 策略 ÷ <b>等均仓恒定持仓</b>(剥离仓位水平, 看纯择时alpha)</span>
+    <span style="color:var(--muted)">虚线=另一策略对比 · 超额=策略÷等均仓恒定(看纯择时alpha)</span>
   </div>
 
   <div class="cards" id="cards"></div>
@@ -81,15 +83,16 @@
   <div class="board">
     <div id="chart"><canvas id="base"></canvas><canvas id="overlay"></canvas><div id="tip"></div></div>
     <div class="legend">
-      <span><i style="border-color:#1f4e79"></i>策略净值</span>
+      <span><i style="border-color:#1f4e79"></i><span id="lgStrat">当前策略</span></span>
       <span><i style="border-color:#9a958a"></i>满仓买入持有</span>
-      <span><i style="border-color:#bf7d16;border-top-style:dashed"></i>等均仓恒定持仓</span>
+      <span><i style="border-color:#8e6fb0;border-top-style:dashed"></i><span id="lgOther">另一策略</span></span>
     </div>
   </div>
 
   <div class="foot">
-    <b>怎么读"超额"</b>：直接比满仓的绝对收益不公平(策略并非时刻满仓)。真正证明<b>择时 alpha</b> 的是"策略 ÷ 等均仓恒定持仓"——同样的平均仓位，若策略跑赢恒定持仓，说明把仓位<b>放对了时候</b>(而非只是调仓位水平)。中间"择时超额/IR"卡片即此含义。<br>
-    <b>结论</b>：改用<b>无底仓 + 趋势持有</b>后，均仓自然升到 38–66%(资金使用率解决)，四标的择时超额全为正 +9.8~+21.8%；<b>科创50 由"择时有害"逆转为有益</b>(+17.5%)——它的 alpha 在趋势里，骑住即可。绝对收益仍低于满仓(择时的取舍)，换来夏普 1.7–2.3、回撤大幅收窄。研究用途，非交易建议。
+    <b>两套策略对比</b>(顶部切换,虚线为另一套对比)：<b>纯期权择时</b>=恐慌灯抄底×动态跌幅+GEX+棘轮出场,floor30；<b>HVWMA结合</b>=趋势指标(日线近似len16)绿→0.65打底、红→期权抄底 overlay。<br>
+    <b>怎么读超额</b>：直接比满仓不公平(策略非时刻满仓)。真正的<b>择时 alpha</b> 看"策略÷等均仓恒定"——同均仓下跑赢恒定持仓,说明把仓位<b>放对了时候</b>。<br>
+    <b>观察</b>：中证1000/创业板/科创 HVWMA结合收益与超额更高(吃到趋势,尤其科创下半年不再踏空)；<b>沪深300 纯期权更好</b>(它低波震荡,HVWMA whipsaw)。HVWMA 为日线近似,你实盘的 3H 版会更及时、少假信号(分钟数据待限频恢复后升级)。研究用途,非交易建议。
   </div>
 </div>
 
@@ -97,14 +100,15 @@
 <script>
 const PANELS=[
   {id:'nav', title:'净值曲线(起点=1)', h:250, lines:[
-    {k:'strat',c:'#1f4e79',w:2.0,lab:'策略'},{k:'bench',c:'#9a958a',w:1.3,lab:'满仓'},{k:'const',c:'#bf7d16',w:1.3,dash:true,lab:'等均仓'}]},
+    {k:'other',c:'#8e6fb0',w:1.2,dash:true,lab:'另一策略'},{k:'bench',c:'#9a958a',w:1.3,lab:'满仓'},{k:'strat',c:'#1f4e79',w:2.0,lab:'策略'}]},
   {id:'weight', title:'策略仓位水平(0=空仓, 100%=满仓)', h:110, ref:100, lines:[{k:'weight',c:'#1f6f5c',w:1.4,fillFrom:0,lab:'仓位'}]},
   {id:'excess', title:'择时超额 · 策略÷等均仓恒定', h:120, ref:1.0, lines:[{k:'excess',c:'#2e7d46',w:1.6,fillFrom:1.0,lab:'超额'}]},
   {id:'dd', title:'回撤', h:120, lines:[
     {k:'dd',c:'#c0392b',w:1.4,fillFrom:0,lab:'策略回撤'},{k:'bdd',c:'#b8b3a8',w:1.2,lab:'满仓回撤'}]},
 ];
 const PADL=56,PADR=16,PADT=20,PADB=6,GAP=12,DATEH=20;
-let CUR=null,LAYOUT=null,DPR=Math.max(1,devicePixelRatio||1),hoverI=-1,curKey=null,RANGE='924';
+let CUR=null,LAYOUT=null,DPR=Math.max(1,devicePixelRatio||1),hoverI=-1,curKey=null,RANGE='924',MODE='opt';
+const MODE_NAME={opt:'纯期权择时', hv:'HVWMA结合'};
 const base=document.getElementById('base'),overlay=document.getElementById('overlay'),
       chart=document.getElementById('chart'),tip=document.getElementById('tip'),
       bctx=base.getContext('2d'),octx=overlay.getContext('2d');
@@ -116,26 +120,35 @@ Object.keys(DATA).forEach((k,i)=>{const b=document.createElement('button');
   tabs.appendChild(b);});
 document.getElementById('rangeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
   RANGE=b.dataset.r;document.querySelectorAll('#rangeSeg button').forEach(x=>x.classList.toggle('on',x===b));select(curKey);});
+document.getElementById('modeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  MODE=b.dataset.m;document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on',x===b));select(curKey);});
 
 function fmtDate(s){return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8);}
 function totalH(){return PANELS.reduce((a,p)=>a+p.h,0)+GAP*(PANELS.length-1)+PADT+PADB+DATEH;}
 
-function select(k){curKey=k;CUR=DATA[k].ranges[RANGE];buildCards(DATA[k].name);resize();onLeave();}
+function select(k){
+  curKey=k; const M=DATA[k].ranges[RANGE], oth=MODE==='opt'?'hv':'opt';
+  CUR={dates:M.dates, bench:M.bench, bdd:M.bdd, bench_stat:M.bench_stat,
+       strat:M[MODE].strat, dd:M[MODE].dd, excess:M[MODE].excess, weight:M[MODE].weight,
+       stats:M[MODE].stats, other:M[oth].strat, other_stats:M[oth].stats};
+  document.getElementById('lgStrat').textContent=MODE_NAME[MODE]+'净值';
+  document.getElementById('lgOther').textContent=MODE_NAME[oth]+'(对比)';
+  buildCards(oth); resize(); onLeave();
+}
 
-function buildCards(name){
-  const s=CUR.stats;const ex=s.excess_ann;
-  const cards=document.getElementById('cards');
-  cards.innerHTML=`
-   <div class="grp"><div class="gt">策略</div>
-     <div class="big">${s.strat.ann}%<span style="font-size:13px;color:var(--muted)"> 年化</span></div>
-     <div class="kv"><span>夏普</span><b>${s.strat.sharpe}</b><span>回撤</span><b>${s.strat.mdd}%</b><span>Calmar</span><b>${s.strat.calmar}</b><span>均仓</span><b>${s.meanw}%</b></div></div>
-   <div class="grp"><div class="gt">满仓买入持有</div>
-     <div class="big" style="color:var(--gray)">${s.bench.ann}%<span style="font-size:13px;color:var(--muted)"> 年化</span></div>
-     <div class="kv"><span>夏普</span><b>${s.bench.sharpe}</b><span>回撤</span><b>${s.bench.mdd}%</b></div>
-     <div class="sub">绝对收益参照(策略以低仓换风控)</div></div>
-   <div class="grp hi"><div class="gt">择时超额 vs 等均仓</div>
+function buildCards(oth){
+  const s=CUR.stats, be=CUR.bench_stat, o=CUR.other_stats, ex=s.excess_ann;
+  document.getElementById('cards').innerHTML=`
+   <div class="grp hi"><div class="gt">${MODE_NAME[MODE]}</div>
+     <div class="big">${s.ann}%<span style="font-size:13px;color:var(--muted)"> 年化</span></div>
+     <div class="kv"><span>夏普</span><b>${s.sharpe}</b><span>回撤</span><b>${s.mdd}%</b><span>Calmar</span><b>${s.calmar}</b><span>均仓</span><b>${s.meanw}%</b></div></div>
+   <div class="grp"><div class="gt">满仓买入持有 · ${MODE_NAME[oth]}(对比)</div>
+     <div class="big" style="color:var(--gray)">${be.ann}%<span style="font-size:13px;color:var(--muted)"> 满仓年化</span></div>
+     <div class="kv"><span>满仓夏普</span><b>${be.sharpe}</b><span>满仓回撤</span><b>${be.mdd}%</b></div>
+     <div class="sub">另一策略 ${MODE_NAME[oth]}: 年化 ${o.ann}% / 夏普 ${o.sharpe} / 回撤 ${o.mdd}%</div></div>
+   <div class="grp"><div class="gt">择时超额 vs 等均仓</div>
      <div class="big ${ex>=0?'pos':'neg'}">${ex>=0?'+':''}${ex}%</div>
-     <div class="kv"><span>信息比率 IR</span><b>${s.ir}</b><span>等均仓${s.meanw}%→</span><b>${s.const.ann}%</b></div>
+     <div class="kv"><span>信息比率 IR</span><b>${s.ir}</b><span>本策略均仓</span><b>${s.meanw}%</b></div>
      <div class="sub">${ex>=2?'择时创造真实alpha(把仓位放对时候)':'择时几乎无超额·收益靠仓位水平'}</div></div>`;
 }
 
