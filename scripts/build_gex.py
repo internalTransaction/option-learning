@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 import json
+import sys
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -16,18 +17,19 @@ from scipy.stats import norm
 from scipy.optimize import brentq
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.data.catalog import latest_ranged_file, read_ranged_parquets
+
 RAW, PROC = ROOT/"data"/"raw", ROOT/"data"/"processed"
 R, MULT = 0.02, 10000
 
 SRC = {
-    "hs300":  ("ts_optbasic_300etf.parquet", "ts_optdaily_300etf_20200101_20260707.parquet",
-               "surface_300etf_20200101_20260707.parquet"),
-    "zz1000": ("ts_optbasic_zz1000.parquet", "ts_optdaily_zz1000_20220801_20260707.parquet",
-               "surface_zz1000_20220801_20260707.parquet"),
-    "kc50":   ("ts_optbasic_kc50.parquet", "ts_optdaily_kc50_20230601_20260707.parquet",
-               "surface_kc50_20230601_20260707.parquet"),
-    "cyb":    ("ts_optbasic_cyb.parquet", "ts_optdaily_cyb_20220901_20260707.parquet",
-               "surface_cyb_20220901_20260707.parquet"),
+    "hs300":  ("300etf", "300etf"),
+    "zz1000": ("zz1000", "zz1000"),
+    "kc50":   ("kc50", "kc50"),
+    "cyb":    ("cyb", "cyb"),
 }
 
 
@@ -54,10 +56,17 @@ def gamma(S, K, T, sig):
 
 
 def build(key):
-    basic, daily, surf = SRC[key]
-    b = pd.read_parquet(RAW/basic)[["ts_code", "call_put", "exercise_price", "maturity_date"]]
-    d = pd.read_parquet(RAW/daily)[["ts_code", "trade_date", "close", "oi"]]
-    sf = pd.read_parquet(PROC/surf)[["date", "spot"]]
+    raw_key, surface_key = SRC[key]
+    surface = latest_ranged_file(PROC, f"surface_{surface_key}")
+    if surface is None:
+        raise FileNotFoundError(f"缺少 surface_{surface_key}_*.parquet")
+    b = pd.read_parquet(RAW/f"ts_optbasic_{raw_key}.parquet")[
+        ["ts_code", "call_put", "exercise_price", "maturity_date"]
+    ]
+    d = read_ranged_parquets(
+        RAW, f"ts_optdaily_{raw_key}", columns=["ts_code", "trade_date", "close", "oi"]
+    )
+    sf = pd.read_parquet(surface.path)[["date", "spot"]]
     for c in ("trade_date",): d[c] = d[c].astype(str)
     b["maturity_date"] = b["maturity_date"].astype(str)
     sf["date"] = sf["date"].astype(str)

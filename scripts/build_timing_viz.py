@@ -16,19 +16,25 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.data.catalog import latest_ranged_file
+
 PROC = ROOT / "data" / "processed"
 
 SOURCES = {
-    "hs300":  ("沪深300ETF", "surface_300etf_20200101_20260707.parquet"),
-    "zz1000": ("中证1000",   "surface_zz1000_20220801_20260707.parquet"),
-    "kc50":   ("科创50",     "surface_kc50_20230601_20260707.parquet"),
-    "cyb":    ("创业板",     "surface_cyb_20220901_20260707.parquet"),
+    "hs300":  ("沪深300ETF", "300etf"),
+    "zz1000": ("中证1000",   "zz1000"),
+    "kc50":   ("科创50",     "kc50"),
+    "cyb":    ("创业板",     "cyb"),
 }
 
 WIN = 63           # 滚动百分位窗口 (63交易日≈3个月, 中金/恐慌择时报告口径)
@@ -98,12 +104,12 @@ def build_one(df: pd.DataFrame) -> dict:
 
 def main() -> None:
     out = {}
-    for key, (name, fn) in SOURCES.items():
-        fp = PROC / fn
-        if not fp.exists():
-            print("跳过(缺失):", fn)
+    for key, (name, surface_key) in SOURCES.items():
+        found = latest_ranged_file(PROC, f"surface_{surface_key}")
+        if found is None:
+            print("跳过(缺失):", f"surface_{surface_key}_*.parquet")
             continue
-        df = pd.read_parquet(fp)
+        df = pd.read_parquet(found.path)
         rec = build_one(df)
         rec["name"] = name
         # 并入 GEX 标准分(按日期对齐, 缺失=None) — 供仓位 GEX 调节 + 副图
@@ -116,7 +122,7 @@ def main() -> None:
             rec["gex_z"] = [None] * len(rec["dates"])
         out[key] = rec
         print(f"{key:7s} {name:8s} {len(rec['dates'])} 天  "
-              f"{rec['dates'][0]}->{rec['dates'][-1]}")
+              f"{rec['dates'][0]}->{rec['dates'][-1]}  ({found.path.name})")
 
     dest = PROC / "timing_viz.json"
     dest.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))

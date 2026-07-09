@@ -44,6 +44,9 @@ pip install -r requirements.txt
 # 1. 拉取历史数据(QVIX 波动率指数 + ETF 日线)
 python -m scripts.fetch_data
 
+# 更新到数据源当前已落库的最新交易日，并刷新报告
+python scripts/update_latest_data.py
+
 # 2. 端到端跑一个波动率择时信号并回测(默认沪深300)
 python -m scripts.run_signal              # 逆向: 高IV看多
 python -m scripts.run_signal --key kc50 --trend
@@ -62,6 +65,10 @@ python -m pytest -q
 
 因为 PCR 与偏度依赖逐日期权链快照，建议用定时任务每个交易日收盘后跑
 `python -m scripts.fetch_data --snapshot` 累积历史，再启用情绪/偏度因子的时序计算。
+
+当前报告使用 Tushare 历史期权日线重建 surface。日常更新优先跑
+`python scripts/update_latest_data.py`：脚本会自动识别最新已落库交易日，只补缺失日期，
+再刷新 `timing_viz.json`、`equity.json` 和 HTML 报告。
 
 ## 路线图
 
