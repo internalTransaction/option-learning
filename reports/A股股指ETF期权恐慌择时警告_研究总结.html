@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A股ETF期权 · 恐慌择时警告系统</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f6f5f1; --card:#ffffff; --card2:#faf9f6;
+    --ink:#1a1916; --ink2:#54524c; --muted:#928f86; --line:#e7e4db; --line2:#efece5;
+    --brand:#1f4e79; --brand-soft:#eaf0f6;
+    --red:#c0392b; --red-bg:#fbeceb; --red-line:#eecbc7;
+    --green:#2e7d46; --green-bg:#e8f2ec; --green-line:#c7e0d0;
+    --amber:#bf7d16; --amber-bg:#fbf2df; --amber-line:#ecdcb4;
+    --shadow:0 1px 2px rgba(20,18,14,.04), 0 6px 22px rgba(20,18,14,.045);
+    --r:12px; --r-sm:8px;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    --font-display:"Fraunces",Georgia,"Songti SC",serif;
+    --ease:cubic-bezier(.2,.7,.2,1);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Noto Sans SC",Segoe UI,Roboto,sans-serif;
+    font-size:14.5px;line-height:1.7;-webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;}
+  /* frontend-design 局部提升：编辑感数字 · 微动效 · 微交互 */
+  .metric .v,.stat .big,.lightbox .cnt{font-family:var(--font-display);font-weight:600;
+    letter-spacing:-.01em;font-variant-numeric:tabular-nums lining-nums;}
+  .kicker{font-family:var(--font-display);font-style:italic;font-weight:500;text-transform:none;
+    letter-spacing:.01em;font-size:13px;}
+  h2 .n,nav a .idx,.mon-head{font-variant-numeric:tabular-nums;}
+  .js main>section{opacity:0;transform:translateY(16px);
+    transition:opacity .7s var(--ease),transform .7s var(--ease);}
+  .js main>section.in{opacity:1;transform:none;}
+  .card{transition:transform .2s var(--ease),box-shadow .2s var(--ease);}
+  .card:hover{transform:translateY(-3px);box-shadow:0 2px 4px rgba(20,18,14,.05),0 14px 34px rgba(20,18,14,.08);}
+  .tier{transition:transform .2s var(--ease);} .tier:hover{transform:translateX(3px);}
+  nav a{position:relative;}
+  @keyframes breathe{0%,100%{box-shadow:0 0 0 3px rgba(0,0,0,.03);}50%{box-shadow:0 0 0 6px rgba(0,0,0,.0);}}
+  .led-dot{animation:breathe 2.6s var(--ease) infinite;}
+  @media (prefers-reduced-motion: reduce){
+    .js main>section{opacity:1;transform:none;transition:none;} .led-dot{animation:none;} html{scroll-behavior:auto;}
+  }
+  .app{display:grid;grid-template-columns:246px minmax(0,1fr);gap:0;max-width:1180px;margin:0 auto;}
+
+  /* ---------- sidebar ---------- */
+  aside{position:sticky;top:0;align-self:start;height:100vh;padding:28px 22px;
+    border-right:1px solid var(--line);display:flex;flex-direction:column;gap:22px;overflow-y:auto;}
+  .brand{font-size:15px;font-weight:700;line-height:1.4;letter-spacing:.2px;}
+  .brand span{display:block;font-size:11.5px;font-weight:500;color:var(--muted);margin-top:3px;letter-spacing:0;}
+  .navttl{font-size:10.5px;font-weight:700;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin:0 0 4px 8px;}
+  nav a{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:var(--r-sm);
+    color:var(--ink2);text-decoration:none;font-size:13.5px;transition:background .15s,color .15s;}
+  nav a:hover{background:var(--card2);color:var(--ink);}
+  nav a.active{background:var(--brand-soft);color:var(--brand);font-weight:600;}
+  nav a .idx{width:18px;height:18px;border-radius:5px;background:var(--line2);color:var(--muted);
+    font-size:11px;display:grid;place-items:center;font-weight:600;flex:none;}
+  nav a.active .idx{background:var(--brand);color:#fff;}
+  .side-status{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 13px;box-shadow:var(--shadow);}
+  .side-status .led{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;}
+  .led-dot{width:9px;height:9px;border-radius:50%;box-shadow:0 0 0 3px rgba(0,0,0,.03);}
+  .side-status .sub{font-size:11px;color:var(--muted);margin-top:5px;}
+
+  /* ---------- main ---------- */
+  main{padding:38px 46px 90px;min-width:0;}
+  section{scroll-margin-top:24px;margin-bottom:46px;}
+  .kicker{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--brand);}
+  h1{font-size:30px;line-height:1.2;margin:6px 0 10px;font-weight:700;letter-spacing:-.01em;}
+  h2{font-size:19px;margin:0 0 4px;font-weight:700;display:flex;align-items:baseline;gap:10px;}
+  h2 .n{font-size:12px;color:var(--muted);font-weight:600;}
+  .sec-sub{color:var(--ink2);font-size:14px;margin:0 0 18px;}
+  h3{font-size:14.5px;margin:24px 0 10px;font-weight:700;}
+  p{margin:10px 0;}
+  a.inline{color:var(--brand);text-decoration:none;border-bottom:1px solid var(--brand-soft);}
+
+  /* hero */
+  .hero{background:linear-gradient(180deg,#fff, #fbfaf7);border:1px solid var(--line);border-radius:16px;
+    padding:26px 28px;box-shadow:var(--shadow);}
+  .thesis{font-size:16.5px;line-height:1.65;margin:0;}
+  .thesis b{color:var(--brand);}
+  .metastrip{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;}
+  .metric{flex:1;min-width:150px;background:var(--card2);border:1px solid var(--line2);border-radius:var(--r);padding:13px 15px;}
+  .metric .v{font-size:22px;font-weight:700;letter-spacing:-.02em;}
+  .metric .v.g{color:var(--green)} .metric .v.b{color:var(--brand)}
+  .metric .l{font-size:11.5px;color:var(--muted);margin-top:2px;}
+
+  /* cards grid */
+  .grid{display:grid;gap:14px}
+  .g3{grid-template-columns:repeat(3,1fr)} .g2{grid-template-columns:repeat(2,1fr)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:17px 18px;box-shadow:var(--shadow);}
+  .card.hl{border:1.5px solid var(--green-line);}
+  .card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .card-h .name{font-weight:700;font-size:15px;}
+  .card-h .code{font-size:11px;color:var(--muted);font-family:var(--mono);}
+  .badge{font-size:11px;padding:3px 10px;border-radius:999px;font-weight:700;letter-spacing:.02em;}
+  .b-go{background:var(--green-bg);color:var(--green);}
+  .b-ok{background:var(--brand-soft);color:var(--brand);}
+  .b-no{background:var(--red-bg);color:var(--red);}
+  .stat{display:flex;align-items:baseline;gap:6px;margin:8px 0 6px;}
+  .stat .big{font-size:20px;font-weight:700;} .stat .vs{font-size:11.5px;color:var(--muted);}
+  .card p{font-size:13px;color:var(--ink2);margin:6px 0 0;}
+
+  /* alert ladder */
+  .ladder{display:flex;flex-direction:column;gap:10px;margin-top:6px;}
+  .tier{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;
+    border:1px solid var(--line);border-radius:var(--r);padding:13px 16px;background:var(--card);box-shadow:var(--shadow);}
+  .tier .sig{width:14px;height:14px;border-radius:50%;box-shadow:0 0 0 4px rgba(0,0,0,.04);}
+  .tier .tt{font-weight:700;font-size:14px;}
+  .tier .cond{font-size:12.5px;color:var(--ink2);}
+  .tier.red{border-left:4px solid var(--red)} .tier.amber{border-left:4px solid var(--amber)} .tier.yellow{border-left:4px solid #d8b23a}
+
+  /* monitor panel */
+  .monitor{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;}
+  .mon-head{display:flex;align-items:center;justify-content:space-between;padding:13px 18px;
+    background:var(--card2);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink2);}
+  .mon-row{display:grid;grid-template-columns:130px 1fr auto;gap:16px;align-items:center;
+    padding:15px 18px;border-bottom:1px solid var(--line2);}
+  .mon-row:last-child{border-bottom:none;}
+  .mon-name{font-weight:700;} .mon-name .code{display:block;font-size:10.5px;color:var(--muted);font-family:var(--mono);font-weight:400;}
+  .sigbars{display:flex;gap:14px;flex-wrap:wrap;}
+  .sigbar{min-width:60px;}
+  .sigbar .lab{font-size:10.5px;color:var(--muted);margin-bottom:3px;}
+  .track{height:6px;background:var(--line2);border-radius:4px;overflow:hidden;}
+  .fill{height:100%;border-radius:4px;}
+  .sigbar .pv{font-size:10.5px;color:var(--ink2);margin-top:2px;font-weight:600;}
+  .lightbox{display:flex;align-items:center;gap:10px;}
+  .lights{display:inline-flex;gap:4px;}
+  .dot{width:14px;height:14px;border-radius:50%;background:var(--line);}
+  .dot.on{background:var(--red);box-shadow:0 0 0 3px var(--red-bg);}
+  .lightbox .cnt{font-weight:700;font-size:15px;min-width:38px;text-align:right;}
+  .verdict{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;}
+
+  /* tables */
+  .tbl-wrap{border:1px solid var(--line);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow);}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line2);}
+  thead th{background:var(--card2);color:var(--ink2);font-weight:700;font-size:12px;letter-spacing:.02em;
+    border-bottom:1px solid var(--line);}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:var(--card2);}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;}
+  .p-pos{background:var(--green-bg);color:var(--green);} .p-neg{background:var(--red-bg);color:var(--red);}
+  .p-warn{background:var(--amber-bg);color:var(--amber);}
+
+  /* callouts */
+  .callout{border-radius:var(--r);padding:16px 20px;margin:14px 0;box-shadow:var(--shadow);}
+  .c-warn{background:var(--amber-bg);border:1px solid var(--amber-line);}
+  .c-warn .h{color:var(--amber);font-weight:700;margin-bottom:6px;}
+  .c-danger{background:var(--red-bg);border:1px solid var(--red-line);}
+  .c-danger .h{color:var(--red);font-weight:700;margin-bottom:8px;font-size:15px;}
+  .callout ul{margin:6px 0 0;padding-left:20px;} .callout li{margin:7px 0;font-size:13.5px;}
+
+  .chartcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px 10px;box-shadow:var(--shadow);}
+  .chartbox{position:relative;height:270px;}
+  pre{background:#1c2530;color:#dfe6ee;padding:16px 18px;border-radius:var(--r);font-size:12.5px;
+    overflow-x:auto;font-family:var(--mono);line-height:1.65;box-shadow:var(--shadow);}
+  pre .k{color:#7fb2e8} pre .c{color:#7d8fa1} pre .s{color:#9ed6a9}
+  ul.clean{padding-left:20px} ul.clean li{margin:6px 0}
+  code{background:var(--line2);padding:1px 6px;border-radius:5px;font-size:12.5px;font-family:var(--mono);}
+  .foot{margin-top:52px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;}
+  .anchor-h{scroll-margin-top:20px}
+
+  @media(max-width:860px){
+    .app{grid-template-columns:1fr}
+    aside{position:static;height:auto;border-right:none;border-bottom:1px solid var(--line);flex-direction:column;}
+    nav{display:grid;grid-template-columns:1fr 1fr;gap:2px}
+    main{padding:26px 20px 60px}
+    .g3,.g2{grid-template-columns:1fr}
+    .mon-row{grid-template-columns:1fr;gap:10px}
+  }
+  @media print{
+    aside{display:none} .app{display:block} main{padding:0}
+    .card,.tbl-wrap,.chartcard,.tier,.monitor,.hero{box-shadow:none}
+    body{background:#fff}
+  }
+</style>
+</head>
+<body>
+<script>if(!matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window){document.documentElement.classList.add('js');}</script>
+<div class="app">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside>
+    <div class="brand">恐慌择时警告系统<span>A股ETF期权 · 曲面极值预警</span></div>
+    <div class="side-status" id="sideStatus"></div>
+    <div>
+      <div class="navttl">目录</div>
+      <nav id="nav">
+        <a href="#summary"><span class="idx">0</span>核心摘要</a>
+        <a href="#rules"><span class="idx">1</span>操作规则</a>
+        <a href="#status"><span class="idx">2</span>实时状态</a>
+        <a href="#signals"><span class="idx">3</span>信号定义</a>
+        <a href="#evidence"><span class="idx">4</span>实证证据</a>
+        <a href="#limits"><span class="idx">5</span>前提与局限</a>
+        <a href="#spec"><span class="idx">6</span>实现规格</a>
+      </nav>
+    </div>
+    <div style="margin-top:auto;font-size:11px;color:var(--muted);line-height:1.5;">
+      数据 2020–2026 · 快照 2026-07-07<br>研究性参考，非投资建议
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main>
+
+    <!-- 0. SUMMARY -->
+    <section id="summary" class="anchor-h">
+      <div class="kicker">研究总结与实现规格</div>
+      <h1>用期权曲面的极端值，<br>预警"恐慌抄底"时机</h1>
+      <div class="hero">
+        <p class="thesis">把期权曲面的 5 个"恐慌"指标各自的极端状态合成为 <b>恐慌灯数（0–5）</b>，作为主观抄底的加注预警。它在 <b>2024-09-24（924政策转向）之后</b>的托底行情里有效，<b>创业板</b>效果最好——但这是<b>研究性择时参考，不是自动交易信号</b>。</p>
+        <div class="metastrip">
+          <div class="metric"><div class="v g">78%</div><div class="l">创业板 ≥1灯 · 20日胜率<br>（基准 66%）</div></div>
+          <div class="metric"><div class="v g">4.2×</div><div class="l">创业板 ≥1灯 · 盈亏比<br>（基准 2.2×）</div></div>
+          <div class="metric"><div class="v b">924</div><div class="l">有效性绑定的<br>regime 分水岭</div></div>
+          <div class="metric"><div class="v b">5→1</div><div class="l">五信号合成一盏灯数<br>≥1~2盏即可参考</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 1. RULES -->
+    <section id="rules" class="anchor-h">
+      <h2>操作规则<span class="n">01 · 给交易员</span></h2>
+      <p class="sec-sub">三个标的按适用度分级；预警按"灯数 + 回撤"分三档。</p>
+      <div class="grid g3">
+        <div class="card hl">
+          <div class="card-h"><div><div class="name">创业板</div><div class="code">159915.SZ</div></div><span class="badge b-go">首选</span></div>
+          <div class="stat"><span class="big" style="color:var(--green)">78% / 4.2×</span></div>
+          <div style="font-size:11.5px;color:var(--muted)">≥1灯 · 胜率 / 盈亏比（基准 66% / 2.2×）</div>
+          <p>AI趋势 β 叠加期权恐慌 α。≥1灯即可关注，≥2灯为较强抄底窗口。</p>
+        </div>
+        <div class="card">
+          <div class="card-h"><div><div class="name">中证1000</div><div class="code">000852 · CFFEX</div></div><span class="badge b-ok">可用</span></div>
+          <div class="stat"><span class="big" style="color:var(--brand)">74% / 2.3×</span></div>
+          <div style="font-size:11.5px;color:var(--muted)">≥1灯 · 胜率 / 盈亏比（基准 65% / 1.6×）</div>
+          <p>宽基分散用。VRP 转负（已实现波动反超隐波）尤其可靠。</p>
+        </div>
+        <div class="card">
+          <div class="card-h"><div><div class="name">科创50</div><div class="code">588000.SH</div></div><span class="badge b-no">不适用</span></div>
+          <div class="stat"><span class="big" style="color:var(--red)">52–58%</span></div>
+          <div style="font-size:11.5px;color:var(--muted)">灯亮后胜率 ≤ 基准（57%）</div>
+          <p>常年上行偏斜、投机追涨，下跌不产生认沽恐慌，抄底逻辑失效。<b>勿用本系统抄底。</b></p>
+        </div>
+      </div>
+
+      <h3>预警分级（以创业板 / 中证1000 为准）</h3>
+      <div class="ladder">
+        <div class="tier yellow"><span class="sig" style="background:#d8b23a"></span>
+          <div><span class="tt">黄色 · 关注</span> &nbsp;<span class="cond">≥1 盏灯　且　20日回撤 &gt; 5%</span></div></div>
+        <div class="tier amber"><span class="sig" style="background:var(--amber)"></span>
+          <div><span class="tt">橙色 · 加注</span> &nbsp;<span class="cond">≥2 盏灯　且　20日回撤 &gt; 8%</span></div></div>
+        <div class="tier red"><span class="sig" style="background:var(--red)"></span>
+          <div><span class="tt">红色 · 重仓参考</span> &nbsp;<span class="cond">≥3 盏灯　且　20日回撤 &gt; 10%（关税战 / 美伊冲突级别深崩，历史随后20日 +12~16%）</span></div></div>
+      </div>
+    </section>
+
+    <!-- 2. STATUS -->
+    <section id="status" class="anchor-h">
+      <h2>实时状态<span class="n">02 · 监控面板</span></h2>
+      <p class="sec-sub">当日各标的的信号分位与恐慌灯数。不触发即不预警——这是系统的"正常态"。</p>
+      <div class="monitor">
+        <div class="mon-head"><span>标的 · 五信号百分位</span><span id="asof"></span></div>
+        <div id="monBody"></div>
+      </div>
+    </section>
+
+    <!-- 3. SIGNALS -->
+    <section id="signals" class="anchor-h">
+      <h2>信号定义<span class="n">03</span></h2>
+      <p class="sec-sub">每个信号取其<b>过去 63 个交易日的滚动百分位</b>（regime 自适应），达到极端即"点亮一盏灯"。</p>
+      <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>信号</th><th>含义</th><th>点亮条件</th><th>直觉</th></tr></thead>
+        <tbody>
+          <tr><td><b>高IV</b></td><td>平值隐含波动率 ATM IV</td><td><span class="pill p-warn">分位 ≥ 0.90</span></td><td>恐慌，买保护推高整体波动</td></tr>
+          <tr><td><b>情绪比</b></td><td>25Δ 认沽IV / 认购IV</td><td><span class="pill p-warn">分位 ≥ 0.90</span></td><td>抢认沽，认沽比认购贵</td></tr>
+          <tr><td><b>RR</b></td><td>风险反转 = 25Δ认购IV − 认沽IV</td><td><span class="pill p-warn">分位 ≤ 0.10</span></td><td>下跌偏斜极端（认沽被抢）</td></tr>
+          <tr><td><b>slope</b></td><td>微笑对 moneyness 的斜率</td><td><span class="pill p-warn">分位 ≤ 0.10</span></td><td>低行权价 IV 陡峭，尾部恐惧</td></tr>
+          <tr><td><b>VRP</b></td><td>方差风险溢价 = ATM IV − 已实现波动(20日)</td><td><span class="pill p-warn">分位 ≤ 0.10</span></td><td>已实现波动反超隐波 = capitulation</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p style="font-size:12.5px;color:var(--muted)">5 个信号高度相关，实践中 <b>≥1~2 盏灯</b> 已捕获大部分 edge，无需等到 5 盏（历史上 5 盏样本仅个位数）。</p>
+    </section>
+
+    <!-- 4. EVIDENCE -->
+    <section id="evidence" class="anchor-h">
+      <h2>实证证据<span class="n">04</span></h2>
+      <p class="sec-sub">回测区间 2020–2026，前瞻/持有期 20 个交易日。</p>
+
+      <h3>4.1　恐慌灯数 → 盈亏比（924后）</h3>
+      <div class="chartcard"><div class="chartbox"><canvas id="lightChart"></canvas></div></div>
+      <p style="font-size:12.5px;color:var(--muted)">实线为各标的极值组盈亏比，虚线为其全样本基准。创业板全面高于基准；科创50 贴近甚至低于基准。</p>
+
+      <h3>4.2　924 前后的 regime 翻转（同一"高IV极值"抄底规则）</h3>
+      <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>标的</th><th class="num">924前极值 胜率 / 盈亏比</th><th class="num">924后极值 胜率 / 盈亏比</th></tr></thead>
+        <tbody>
+          <tr><td>沪深300</td><td class="num">45% / 0.75</td><td class="num"><b>88% / 3.71</b></td></tr>
+          <tr><td>科创50</td><td class="num">34% / 0.86</td><td class="num">79% / 3.77</td></tr>
+          <tr><td>创业板</td><td class="num">43% / 1.01</td><td class="num"><b>88% / 7.80</b></td></tr>
+          <tr><td>中证1000</td><td class="num">53% / 0.73</td><td class="num">77% / 2.02</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p style="font-size:13.5px;color:var(--ink2)">924<b>前</b>抄恐慌普遍是接飞刀（盈亏比 &lt;1）；924<b>后</b>同一信号翻转为强反转。<b>这套系统的有效性绑定 924 后的政策托底 regime。</b></p>
+
+      <h3>4.3　924后回撤事件复盘（中证1000，回撤 &gt; 5%）</h3>
+      <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>事件</th><th>回撤</th><th>触发信号</th><th class="num">未来20日</th></tr></thead>
+        <tbody>
+          <tr><td>2025-01 节前回调<br><span style="font-size:11px;color:var(--muted)">DeepSeek 撞春节休市</span></td><td>−14%</td><td><span class="pill p-warn">休市 · 无数据 †</span></td><td class="num"><span class="pill p-pos">+10.4%</span></td></tr>
+          <tr><td>2025-04 关税战</td><td>−17%</td><td><span class="pill p-pos">全部 5 灯</span></td><td class="num"><span class="pill p-pos">+12.0%</span></td></tr>
+          <tr><td>2025-10 特朗普 / crypto 清算</td><td>−6%</td><td>情绪比 / RR / slope</td><td class="num"><span class="pill p-pos">+4.4%</span></td></tr>
+          <tr><td>2025-11 底部</td><td>−7%</td><td>情绪比 / RR / slope</td><td class="num"><span class="pill p-pos">+3.7%</span></td></tr>
+          <tr><td>2026-03-04（半山腰）</td><td>−5%</td><td><span class="pill p-neg">全部5灯 · 误报</span></td><td class="num"><span class="pill p-neg">−4.1%</span></td></tr>
+          <tr><td>2026-03 美伊冲突</td><td>−13%</td><td><span class="pill p-pos">高IV/情绪比/RR/slope</span></td><td class="num"><span class="pill p-pos">+12.7%</span></td></tr>
+          <tr><td>2026-04 美伊冲突②</td><td>−10%</td><td><span class="pill p-pos">全部 5 灯</span></td><td class="num"><span class="pill p-pos">+15.6%</span></td></tr>
+          <tr><td>2026-06 大跌</td><td>−7%</td><td><span class="pill p-neg">无（海外gap漏）</span></td><td class="num"><span class="pill p-pos">+5.6%</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p style="font-size:13.5px;color:var(--ink2)"><b>越深的崩盘信号越齐、越可靠</b>。<b>灵敏度分工</b>：情绪比/RR/slope 灵敏（浅回调也响，易误报）；高IV/VRP 挑剔（只在深恐慌响，更准但漏浅底）。</p>
+      <p style="font-size:12px;color:var(--muted)">† 那根 −14% 是<b>节前国内慢回调</b>（非急跌，信号未亮）；DeepSeek 冲击（美股1/27暴跌）恰落在 <b>A股春节休市（1/27–2/5，9天）</b>内，休市无数据、信号无从产生，且 A股节后高开上涨（DeepSeek 利好中国AI）本无恐慌可抄。这是<b>休市数据缺口</b>，非信号失灵。</p>
+    </section>
+
+    <!-- 5. LIMITS -->
+    <section id="limits" class="anchor-h">
+      <h2>前提与局限<span class="n">05 · 交易员必读</span></h2>
+      <div class="callout c-danger">
+        <div class="h">务必知晓的六条边界</div>
+        <ul>
+          <li><b>regime 依赖</b>：全部结论建立在"仍处 924 后政策托底环境"。若判断 regime 转向，信号可能失效甚至反向——924 前就是反例。<b>先判 regime，再信信号。</b></li>
+          <li><b>会漏（海外 gap）</b>：期权数据对<b>本土盘中恐慌</b>更灵，对<b>海外隔夜跳空</b>是盲区——A股盘中没跌透，认沽就没被买起来。</li>
+          <li><b>会漏（长假休市）</b>：若全球冲击落在春节/国庆停牌窗口（如 2025 DeepSeek 撞春节 9 天），期间无数据无信号，节后可能已重定价甚至高开。<b>长假前后需人工盯海外，不能只等系统。</b></li>
+          <li><b>会误报</b>：信号触发 ≠ 精确底，可能偏早接在半山腰（如 2026-03-04 五灯全亮却又跌 4%）。建议配合价格 / 趋势二次确认。</li>
+          <li><b>样本有限</b>：924 后仅约 21 个月、以 V 型急反弹为主；极值日成簇（几十个触发点实为十几段独立行情）。不足以当机械信号。</li>
+          <li><b>科创50 除外</b>：不要对科创50 用恐慌抄底逻辑。</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 6. SPEC -->
+    <section id="spec" class="anchor-h">
+      <h2>实现规格<span class="n">06 · 给开发同事</span></h2>
+
+      <h3>6.1　数据管线</h3>
+      <ul class="clean">
+        <li><b>数据源</b>：Tushare Pro。<code>opt_basic</code>（合约元数据）+ <code>opt_daily</code>（每日结算价 / 成交量 / 持仓量）+ <code>fund_daily</code> / <code>index_daily</code>（标的价）。</li>
+        <li><b>标的映射</b>：创业板 <code>OP159915.SZ</code>、科创50 <code>OP588000.SH</code>、中证1000 <code>OP000852.SH</code>（标的指数 000852）。</li>
+        <li><b>每日重建曲面</b>：活跃合约 → 由看跌看涨平价反解<b>隐含远期 F</b>（ETF 有分红，勿直接用现价）→ 仅用虚值合约 → Black-Scholes 反解每张 IV → 30 日常数期限插值。</li>
+      </ul>
+
+      <h3>6.2　每日计算逻辑</h3>
+<pre><span class="k">for</span> 每个标的:
+    surface = 重建当日曲面(opt_basic, opt_daily, 标的价)   <span class="c"># atm_iv, iv_ratio_25d, rr_25d, smile_slope</span>
+    vrp = atm_iv - 已实现波动(过去20日, 年化)
+    <span class="k">for</span> 信号 <span class="k">in</span> [atm_iv, iv_ratio_25d(高), rr_25d(低), smile_slope(低), vrp(低)]:
+        pct = 该信号在过去63日的百分位
+        灯[信号] = (pct&gt;=0.90) <span class="k">if</span> 方向=='高' <span class="k">else</span> (pct&lt;=0.10)
+    灯数 = sum(灯);  回撤 = 收盘 / 过去20日最高 - 1
+    <span class="k">if</span> 灯数&gt;=2 <span class="k">and</span> 回撤&lt;-0.08:  触发 <span class="s">【橙色·加注】</span>
+    <span class="k">elif</span> 灯数&gt;=1 <span class="k">and</span> 回撤&lt;-0.05:  触发 <span class="s">【黄色·关注】</span>
+    <span class="c"># 长假盲区：若与上一交易日间隔 &gt;= 3 天，节后首日预警降级 + 加人工复核标记</span></pre>
+
+      <h3>6.3　校验建议</h3>
+      <ul class="clean">
+        <li>重建的 ATM IV 应与官方 QVIX（akshare <code>index_option_*_qvix</code>）平均差 &lt; 2 个点、方向一致，可作管线正确性校验。</li>
+        <li>参数可调：百分位窗口（默认 63 日）、极值阈值（默认 0.90 / 0.10，可放宽到 0.85 / 0.15 增加触发）、前瞻期（默认 20 日）。</li>
+        <li>上线后持续记录每次预警的实际后续表现，滚动监控信号是否随 regime 衰减。</li>
+      </ul>
+    </section>
+
+    <div class="foot">
+      本文件为研究性总结，所述胜率 / 盈亏比基于 2020–2026 历史样本回测，不构成投资建议。信号为主观择时的辅助参考，实盘需结合宏观 regime 判断、价格趋势与风险管理。<br>
+      A股ETF期权曲面研究项目 · 生成 2026-07-07
+    </div>
+
+  </main>
+</div>
+
+<script>
+const STATE = {
+  "cyb":{"name":"创业板","code":"159915.SZ","date":"2026-07-07","lights":0,"verdict":"go","pct":{"高IV":0.83,"情绪比":0.38,"RR":0.63,"slope":0.71,"VRP":0.13}},
+  "kc50":{"name":"科创50","code":"588000.SH","date":"2026-07-07","lights":0,"verdict":"no","pct":{"高IV":0.83,"情绪比":0.71,"RR":0.21,"slope":0.29,"VRP":0.62}},
+  "zz1000":{"name":"中证1000","code":"000852","date":"2026-07-07","lights":0,"verdict":"ok","pct":{"高IV":0.70,"情绪比":0.11,"RR":0.90,"slope":0.89,"VRP":0.24}}
+};
+const SIG=[["高IV","high"],["情绪比","high"],["RR","low"],["slope","low"],["VRP","low"]];
+function isOn(v,dir){return dir==="high"? v>=0.90 : v<=0.10;}
+function fillColor(v,dir){const on=isOn(v,dir);return on?"var(--red)": (v>0.75||v<0.25?"#c8a13a":"var(--brand)");}
+
+/* sidebar status LED */
+(function(){
+  const total=Object.values(STATE).reduce((a,s)=>a+s.lights,0);
+  const lvl = total>=3?["var(--red)","有预警"]:total>=1?["var(--amber)","关注"]:["var(--green)","正常 · 无预警"];
+  document.getElementById("sideStatus").innerHTML=
+    `<div class="led"><span class="led-dot" style="background:${lvl[0]}"></span>系统状态：${lvl[1]}</div>
+     <div class="sub">三标的合计 ${total} 盏灯 · ${STATE.cyb.date}</div>`;
+})();
+
+/* monitor panel */
+(function(){
+  document.getElementById("asof").textContent="截至 "+STATE.cyb.date;
+  const vmap={go:["b-go","首选"],ok:["b-ok","可用"],no:["b-no","不适用"]};
+  let h="";
+  for(const k of ["cyb","zz1000","kc50"]){
+    const s=STATE[k];
+    let bars="";
+    SIG.forEach(([nm,dir])=>{const v=s.pct[nm];const pctShow=isOn(v,dir);
+      bars+=`<div class="sigbar"><div class="lab">${nm}</div>
+        <div class="track"><div class="fill" style="width:${(v*100).toFixed(0)}%;background:${fillColor(v,dir)}"></div></div>
+        <div class="pv" style="color:${pctShow?'var(--red)':'var(--ink2)'}">${(v*100).toFixed(0)}%${pctShow?' ●':''}</div></div>`;});
+    let dots="";for(let i=0;i<5;i++)dots+=`<span class="dot ${i<s.lights?'on':''}"></span>`;
+    const vd=vmap[s.verdict];
+    h+=`<div class="mon-row">
+      <div class="mon-name">${s.name}<span class="code">${s.code}</span><span class="verdict ${vd[0]}" style="margin-top:5px;display:inline-block">${vd[1]}</span></div>
+      <div class="sigbars">${bars}</div>
+      <div class="lightbox"><span class="lights">${dots}</span><span class="cnt">${s.lights}盏</span></div>
+    </div>`;
+  }
+  document.getElementById("monBody").innerHTML=h;
+})();
+
+/* scroll reveal (frontend-design: motion orchestration, 克制) */
+(function(){
+  if(!document.documentElement.classList.contains('js'))return;
+  const secs=[...document.querySelectorAll('main>section')];
+  const io=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{rootMargin:"0px 0px -12% 0px",threshold:.08});
+  secs.forEach(s=>io.observe(s));
+  setTimeout(()=>secs.forEach(s=>s.classList.add('in')),1600); /* 兜底：确保最终可见 */
+})();
+
+/* scrollspy */
+(function(){
+  const links=[...document.querySelectorAll('#nav a')];
+  const map=new Map(links.map(a=>[a.getAttribute('href').slice(1),a]));
+  const obs=new IntersectionObserver((es)=>{
+    es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));
+      const a=map.get(e.target.id); if(a)a.classList.add('active');}});
+  },{rootMargin:"-15% 0px -70% 0px"});
+  document.querySelectorAll('main section').forEach(s=>obs.observe(s));
+})();
+
+/* chart */
+const X=["≥1盏","≥2盏","≥3盏","≥4盏"];
+const LS={cyb:{c:"#2e7d46",base:2.18,pay:[4.21,3.54,3.03,4.35],nm:"创业板"},
+ zz1000:{c:"#1f4e79",base:1.61,pay:[2.30,2.00,1.72,2.27],nm:"中证1000"},
+ kc50:{c:"#bf7d16",base:2.20,pay:[2.38,1.67,1.69,1.71],nm:"科创50"}};
+const dsets=[];
+for(const k in LS){const s=LS[k];
+ dsets.push({label:s.nm,data:s.pay,borderColor:s.c,backgroundColor:s.c,borderWidth:2.5,pointRadius:4,pointHoverRadius:6,tension:.15});
+ dsets.push({label:s.nm+"基准",data:X.map(()=>s.base),borderColor:s.c,borderWidth:1,borderDash:[5,4],pointRadius:0});
+}
+new Chart(document.getElementById("lightChart"),{type:"line",data:{labels:X,datasets:dsets},
+ options:{responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{display:true,position:"top",align:"end",labels:{filter:i=>!i.text.includes("基准"),font:{size:12},usePointStyle:true,pointStyle:"line",boxWidth:16}},
+   tooltip:{callbacks:{label:c=>c.dataset.label+"：盈亏比 "+c.parsed.y.toFixed(2)}}},
+  scales:{y:{title:{display:true,text:"盈亏比  MFE / |MAE|",color:"#928f86",font:{size:11}},min:1,
+     grid:{color:"#efece5"},ticks:{color:"#928f86"}},
+   x:{grid:{display:false},ticks:{color:"#54524c",font:{size:12}}}}}});
+</script>
+</body>
+</html>

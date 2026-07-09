@@ -1,0 +1,69 @@
+# ============================================================
+# ETF 期权择时项目 - 全局配置
+# ============================================================
+
+# 研究标的：ETF 期权及其对应的标的指数
+# code       期权/ETF 代码
+# exchange   sse=上交所, szse=深交所
+# qvix       akshare 波动率指数(QVIX)接口关键字, 用于快速取到隐含波动率指数
+underlyings:
+  hs300_sse:
+    name: "沪深300ETF(华泰柏瑞)"
+    etf_code: "510300"
+    exchange: "sse"
+    index_code: "sh000300"
+    qvix: "300etf"          # ak.option_300etf_qvix
+    enabled: true
+
+  hs300_szse:
+    name: "沪深300ETF(嘉实)"
+    etf_code: "159919"
+    exchange: "szse"
+    index_code: "sz399300"
+    qvix: "300etf"
+    enabled: false          # 与 sse 沪深300 重复, 默认只研究一个
+
+  kc50:
+    name: "科创50ETF(华夏)"
+    etf_code: "588000"
+    exchange: "sse"
+    index_code: "sh000688"
+    qvix: "kc50"            # ak.option_kc50etf_qvix (安装后校准)
+    enabled: true
+
+  cyb:
+    name: "创业板ETF(易方达)"
+    etf_code: "159915"
+    exchange: "szse"
+    index_code: "sz399006"
+    qvix: "cyb"            # ak.option_cyb_qvix
+    enabled: true
+
+# 数据缓存
+cache:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  format: "parquet"        # parquet | csv
+
+# 因子参数
+factors:
+  hv_window: 20            # 历史波动率窗口(交易日)
+  iv_percentile_window: 252  # IV 百分位回看窗口(约一年)
+  term_short_days: 30      # 近月近似天数
+  term_long_days: 60       # 次月近似天数
+  skew_delta: 0.25         # 计算 skew 用的 delta (25-delta risk reversal)
+
+# 信号参数
+signals:
+  # IV 百分位择时阈值: 高波动 -> 谨慎/看空, 低波动 -> 布局/看多
+  iv_pct_high: 0.80
+  iv_pct_low: 0.20
+  # PCR 择时阈值(经验值, 需回测校准)
+  pcr_high: 1.20
+  pcr_low: 0.70
+
+# 回测参数
+backtest:
+  start_date: "2020-01-01"
+  fee_bps: 2               # 单边手续费(基点)
+  slippage_bps: 1

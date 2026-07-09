@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A股ETF期权择时系统 · 总览与导航</title>
+<style>
+  :root{
+    --paper:#f6f5f1;--card:#fff;--card2:#faf9f6;--ink:#1a1916;--ink2:#54524c;--muted:#928f86;
+    --line:#e7e4db;--line2:#efece5;--brand:#1f4e79;--brand-soft:#eaf0f6;
+    --red:#c0392b;--green:#2e7d46;--amber:#bf7d16;--purple:#7c3aad;--teal:#16847e;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    --font-display:"Iowan Old Style","Palatino Linotype",Georgia,"Songti SC",serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;
+    font-size:14.5px;line-height:1.7;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;}
+  .wrap{max-width:1000px;margin:0 auto;padding:34px 22px 70px;}
+  .kick{font-family:var(--font-display);font-style:italic;color:var(--brand);font-size:14px;}
+  h1{margin:6px 0 6px;font-size:27px;font-weight:700;letter-spacing:.2px;}
+  .lead{color:var(--ink2);font-size:15px;max-width:760px;}
+  .lead b{color:var(--ink);}
+  h2{font-size:14px;font-weight:700;letter-spacing:.11em;color:var(--muted);text-transform:uppercase;
+    margin:38px 0 14px;padding-bottom:7px;border-bottom:1px solid var(--line);}
+  .num{font-family:var(--font-display);}
+
+  .entry{display:flex;gap:14px;flex-wrap:wrap;margin:22px 0 4px;}
+  .entry a{flex:1;min-width:240px;text-decoration:none;background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:16px 18px;box-shadow:0 1px 2px rgba(20,18,14,.04),0 8px 22px rgba(20,18,14,.05);
+    transition:transform .18s,box-shadow .18s;display:block;}
+  .entry a:hover{transform:translateY(-3px);box-shadow:0 3px 6px rgba(20,18,14,.06),0 16px 34px rgba(20,18,14,.09);}
+  .entry .t{font-size:16px;font-weight:700;color:var(--brand);}
+  .entry .d{font-size:12.5px;color:var(--ink2);margin-top:4px;}
+  .entry .go{font-size:12px;color:var(--muted);margin-top:8px;font-family:var(--mono);}
+
+  .flow{display:grid;grid-template-columns:1fr;gap:10px;}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px 14px 54px;position:relative;
+    box-shadow:0 1px 2px rgba(20,18,14,.03);}
+  .step .n{position:absolute;left:14px;top:14px;width:28px;height:28px;border-radius:8px;background:var(--brand-soft);
+    color:var(--brand);font-family:var(--font-display);font-weight:600;font-size:15px;display:flex;align-items:center;justify-content:center;}
+  .step .h{font-size:15px;font-weight:700;}
+  .step .h .tag{font-size:11px;font-weight:600;color:#fff;background:var(--brand);border-radius:5px;padding:1px 7px;margin-left:8px;vertical-align:1px;}
+  .step .b{font-size:13.5px;color:var(--ink2);margin-top:3px;}
+  .step .find{font-size:12.5px;margin-top:7px;padding:7px 10px;background:var(--card2);border-left:3px solid var(--green);border-radius:0 7px 7px 0;color:var(--ink2);}
+  .step .find b{color:var(--green);}
+  .step.warn .find{border-left-color:var(--red);} .step.warn .find b{color:var(--red);}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line2);}
+  th{background:var(--card2);font-size:11.5px;color:var(--muted);font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+  td .mono{font-family:var(--mono);font-weight:600;}
+  tr:last-child td{border-bottom:none;}
+  .pos{color:var(--green);font-weight:600;} .neg{color:var(--red);font-weight:600;}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @media(max-width:680px){.grid2{grid-template-columns:1fr;}}
+  .kb{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;}
+  .kb h3{margin:0 0 8px;font-size:13px;font-weight:700;color:var(--ink);}
+  .kb ul{margin:0;padding-left:0;list-style:none;}
+  .kb li{font-size:12.5px;color:var(--ink2);padding:3px 0;border-bottom:1px dashed var(--line2);display:flex;justify-content:space-between;gap:12px;}
+  .kb li:last-child{border-bottom:none;}
+  .kb li code,.kb li .v{font-family:var(--mono);color:var(--ink);font-size:12px;}
+  .kb li .f{color:var(--muted);}
+  .foot{margin-top:30px;color:var(--muted);font-size:12px;line-height:1.75;border-top:1px solid var(--line);padding-top:14px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kick">A-share Index-ETF Option Timing · System Overview</div>
+  <h1>A股指数ETF期权 · 波动率择时系统</h1>
+  <p class="lead">用期权波动率曲面刻画市场恐慌/贪婪，为<b>个股组合做仓位管理</b>(择时加减仓，非做空)。
+    核心定位：期权数据是<b>质量过滤器</b>，不是方向预测器——它擅长在别人恐慌时判断"这波跌该不该抄"。
+    本页是整条逻辑链与研究依据的导航。</p>
+
+  <div class="entry">
+    <a href="A股ETF期权_波动率择时信号台.html">
+      <div class="t">① 波动率择时信号台 →</div>
+      <div class="d">主图价格 + 6个分位副图 + GEX + 建议仓位；十字光标逐日读数；恐慌灯/melt-up触发带。每天看该拿多少仓。</div>
+      <div class="go">4标的 · 924以来/全部可切</div></a>
+    <a href="A股ETF期权_策略净值超额.html">
+      <div class="t">② 策略净值与择时超额 →</div>
+      <div class="d">策略 vs 满仓 vs 等均仓恒定；超额曲线 + 回撤子图；指标卡。验证策略值不值、有没有真alpha。</div>
+      <div class="go">含5bps成本 · IR信息比率</div></a>
+  </div>
+
+  <h2>逻辑链条 · 六步 + 依据</h2>
+  <div class="flow">
+    <div class="step"><div class="n">1</div>
+      <div class="h">信号采集<span class="tag">曲面因子</span></div>
+      <div class="b">Tushare期权链构建波动率曲面：ATM IV、情绪比(25Δ认沽/认购IV)、RR、微笑斜率、VRP、PCR。全部取 <b>63日滚动百分位</b>(中金口径)。</div>
+      <div class="find"><b>为何用百分位不用z-score</b>：IV/VRP右偏厚尾，z会被自身尖峰污染std；极值门槛用百分位更稳(两口径触发重叠Jaccard仅0.17，非等价)。</div></div>
+    <div class="step"><div class="n">2</div>
+      <div class="h">恐慌五灯<span class="tag">极值判定</span></div>
+      <div class="b">高IV≥.90 · 情绪比≥.90 · RR≤.10 · 斜率≤.10 · VRP≤.10，五信号合成亮灯数。全部指向"恐慌→反转看多"。</div>
+      <div class="find"><b>关键</b>：五灯单独没有领先性(没跌之前假信号多)——它是<b>条件性alpha</b>，价值只在"已经跌了"时释放。</div></div>
+    <div class="step"><div class="n">3</div>
+      <div class="h">触发闸门<span class="tag">灯 × 动态跌幅</span></div>
+      <div class="b">抄底 = 恐慌灯 + <b>动态跌幅</b>(20日动量的1年滚动分位，替代 hardcode −5/−8/−10%)。gate 随跌幅增大。</div>
+      <div class="find"><b>消融证明</b>：控制跌幅后，"有灯 vs 无灯"胜率 40%→77%(中证1000)。跌幅=触发器、期权=质量过滤器，缺一不可。动态阈值还修掉了沪深300的不稳。</div></div>
+    <div class="step"><div class="n">4</div>
+      <div class="h">建仓<span class="tag">无底仓</span></div>
+      <div class="b">buy = 恐慌度 × 跌幅门 × GEX调节；目标仓位 = ramp(buy)，越跌越恐慌越接近满仓。<b>无人为底仓</b>。</div>
+      <div class="find"><b>分段建仓测试</b>：离散3档≈5档≈连续爬坡(精细化零增量)；但纯跌幅分批(丢掉恐慌质量)明显更差——质量加权不能省。</div></div>
+    <div class="step warn"><div class="n">5</div>
+      <div class="h">出场<span class="tag">趋势持有</span></div>
+      <div class="b">抄底进场后<b>骑趋势</b>：未跌破持仓峰值×95%(trailing 5%)就保持仓位、不线性减；破位才走，melt-up过热降到15%。</div>
+      <div class="find"><b>逃顶做空被证伪</b>(波动率不对称：底有尖峰、顶无)——只做骑趋势+过热降仓，不反向开空。趋势持有让均仓自然升到 <b>38–66%</b>(资金使用率解决、不靠floor)。</div></div>
+    <div class="step"><div class="n">6</div>
+      <div class="h">GEX增强<span class="tag">dealer gamma</span></div>
+      <div class="b">GEX(dealer gamma敞口)作 buy 的连续调节：低GEX(空gamma·波动放大·剧烈capitulation)抄底加成、高GEX压制。K=0.4。</div>
+      <div class="find"><b>正交增量</b>：GEX与现有因子几乎不相关(|r|&lt;0.3)；同样恐慌抄底，低GEX vs 高GEX 胜率大幅分离(中证1000 95% vs 47%)。A股无pin/价格点位效应，只作regime择时。</div></div>
+  </div>
+
+  <h2>验证 · 择时超额(924以来, vs 等均仓恒定持仓)</h2>
+  <table>
+    <tr><th>标的</th><th>性格</th><th>均仓</th><th>年化</th><th>夏普</th><th>回撤</th><th>择时超额(IR)</th></tr>
+    <tr><td>沪深300ETF</td><td>趋势型</td><td class="mono">66%</td><td class="mono">29.3%</td><td class="mono">1.70</td><td class="mono">−10.1%</td><td class="pos">+14.6% (1.46)</td></tr>
+    <tr><td>中证1000</td><td>均值回归(TS紧)</td><td class="mono">66%</td><td class="mono">36.2%</td><td class="mono">1.94</td><td class="mono">−11.4%</td><td class="pos">+9.8% (0.47)</td></tr>
+    <tr><td>科创50</td><td>强趋势(骑住)</td><td class="mono">38%</td><td class="mono">47.9%</td><td class="mono">2.07</td><td class="mono">−13.0%</td><td class="pos">+17.5% (0.83)</td></tr>
+    <tr><td>创业板</td><td>趋势型</td><td class="mono">62%</td><td class="mono">63.6%</td><td class="mono">2.30</td><td class="mono">−10.5%</td><td class="pos">+21.8% (0.85)</td></tr>
+  </table>
+  <p class="lead" style="font-size:13px;margin-top:10px">
+    "择时超额" = 策略 vs <b>同均仓恒定持仓</b>(剥离仓位水平)——四标的全正，证明是把仓位放对时候的真alpha，而非只是降仓。
+    绝对收益仍低于满仓(择时取舍)，换来夏普 1.7–2.3、回撤大幅收窄。<b>科创50</b> 之前线性减仓下"择时有害"，改骑趋势后逆转为 +17.5%——它的alpha在趋势里。</p>
+
+  <h2>核心结论速记</h2>
+  <div class="grid2">
+    <div class="kb"><h3>方法论</h3><ul>
+      <li><span>期权=质量过滤器，非方向预测器</span><span class="f">条件性alpha</span></li>
+      <li><span>擅抄底不擅逃顶</span><span class="f">波动率不对称</span></li>
+      <li><span>动态阈值(分位) &gt; hardcode</span><span class="f">自适应+可比</span></li>
+      <li><span>无底仓+趋势持有 &gt; 底仓+线性减</span><span class="f">均仓↑超额↑</span></li>
+      <li><span>GEX正交增量，只作regime</span><span class="f">非价格点位</span></li>
+      <li><span>模型保持简单(连续≈离散)</span><span class="f">别上XGBoost</span></li>
+    </ul></div>
+    <div class="kb"><h3>关键参数</h3><ul>
+      <li><span class="f">滚动分位窗口</span><span class="v">63 日</span></li>
+      <li><span class="f">极值阈值(五灯)</span><span class="v">0.90 / 0.10</span></li>
+      <li><span class="f">跌幅门 gate</span><span class="v">(0.30−动量分位)/0.30</span></li>
+      <li><span class="f">建仓 buy 阈值 / 满仓</span><span class="v">0.15 / 0.45</span></li>
+      <li><span class="f">GEX 调节 K / clamp</span><span class="v">0.4 / [0.4,1.5]</span></li>
+      <li><span class="f">趋势止损 TS / 过热仓</span><span class="v">5% / 15%</span></li>
+      <li><span class="f">换手成本</span><span class="v">5 bps</span></li>
+    </ul></div>
+  </div>
+
+  <h2>数据与脚本</h2>
+  <div class="grid2">
+    <div class="kb"><h3>数据管线(scripts/)</h3><ul>
+      <li><span>build_surface.py</span><span class="f">期权链→曲面</span></li>
+      <li><span>build_timing_viz.py</span><span class="f">可视化数据(含gex并入)</span></li>
+      <li><span>build_gex.py</span><span class="f">dealer GEX + max-OI</span></li>
+      <li><span>build_equity.py</span><span class="f">净值/超额</span></li>
+    </ul></div>
+    <div class="kb"><h3>研究脚本(scripts/)</h3><ul>
+      <li><span>ablation_lights_vs_drawdown</span><span class="f">灯×跌幅消融</span></li>
+      <li><span>topping_dynamic / second_order</span><span class="f">逃顶(证伪)</span></li>
+      <li><span>exit_trailing / ts_scan</span><span class="f">趋势持有定参</span></li>
+      <li><span>gex_enhance / gex_position</span><span class="f">GEX强化+接入</span></li>
+    </ul></div>
+  </div>
+
+  <div class="foot">
+    数据来源：Tushare 期权链构建波动率曲面。分析窗口默认聚焦 <b>2024-09-24(924行情起点)</b> 之后。
+    本系统为<b>研究性总结</b>，所有胜率/夏普/超额基于历史样本回测(含5bps成本)，样本有限(924后约21个月、以V型急反弹为主)，
+    极值样本成簇、小样本高胜率需打折看待。<b>不构成投资建议。</b>
+  </div>
+</div>
+</body>
+</html>

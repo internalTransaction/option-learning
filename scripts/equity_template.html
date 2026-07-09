@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A股ETF期权 · 策略净值与择时超额</title>
+<style>
+  :root{
+    --paper:#f6f5f1; --card:#fff; --ink:#1a1916; --ink2:#54524c; --muted:#928f86;
+    --line:#e7e4db; --line2:#efece5; --brand:#1f4e79;
+    --red:#c0392b; --green:#2e7d46; --amber:#bf7d16; --gray:#9a958a;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    --font-display:"Iowan Old Style","Palatino Linotype",Georgia,"Songti SC",serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif;
+    font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;}
+  .wrap{max-width:1160px;margin:0 auto;padding:26px 22px 60px;}
+  header{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px 24px;
+    border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:16px;}
+  h1{margin:0;font-size:21px;font-weight:700;}
+  h1 .sub{display:block;font-size:12.5px;font-weight:500;color:var(--muted);margin-top:5px;}
+  .kick{font-family:var(--font-display);font-style:italic;color:var(--brand);font-size:13px;}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;}
+  .tab{border:1px solid var(--line);background:var(--card);color:var(--ink2);
+    padding:7px 15px;border-radius:20px;font-size:13.5px;cursor:pointer;font-weight:500;transition:.15s;}
+  .tab:hover{border-color:#d8d4c8;color:var(--ink);} .tab.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600;}
+  .toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:2px 2px 14px;font-size:12.5px;color:var(--ink2);}
+  .rseg{display:inline-flex;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--card);}
+  .rseg button{border:0;background:transparent;color:var(--ink2);font:inherit;font-size:12.5px;padding:4px 13px;cursor:pointer;}
+  .rseg button.on{background:var(--brand);color:#fff;font-weight:600;}
+
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;}
+  .grp{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 15px;
+    box-shadow:0 1px 2px rgba(20,18,14,.04);}
+  .grp.hi{background:#eef5f2;border-color:#bfe0d4;}
+  .grp .gt{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.03em;margin-bottom:8px;text-transform:uppercase;}
+  .grp.hi .gt{color:#1f6f5c;}
+  .grp .big{font-family:var(--font-display);font-weight:600;font-size:26px;letter-spacing:-.01em;line-height:1;}
+  .grp .big.pos{color:var(--green);} .grp .big.neg{color:var(--red);}
+  .grp .sub{font-size:11.5px;color:var(--muted);margin-top:4px;}
+  .grp .kv{display:flex;gap:12px;flex-wrap:wrap;margin-top:9px;font-size:12px;}
+  .grp .kv b{font-family:var(--mono);color:var(--ink);font-weight:600;}
+  .grp .kv span{color:var(--muted);}
+  @media(max-width:720px){.cards{grid-template-columns:1fr;}}
+
+  .board{background:var(--card);border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 1px 2px rgba(20,18,14,.04),0 8px 26px rgba(20,18,14,.05);padding:8px 8px 4px;}
+  #chart{position:relative;width:100%;cursor:crosshair;touch-action:none;}
+  #chart canvas{display:block;position:absolute;left:0;top:0;width:100%;} #overlay{pointer-events:none;}
+  #tip{position:absolute;pointer-events:none;z-index:9;min-width:150px;background:rgba(255,255,255,.97);
+    border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 22px rgba(20,18,14,.16);padding:9px 11px;font-size:12px;display:none;}
+  #tip .td{font-family:var(--mono);font-weight:700;color:var(--brand);font-size:12.5px;margin-bottom:6px;border-bottom:1px solid var(--line2);padding-bottom:5px;}
+  #tip .row{display:flex;justify-content:space-between;gap:16px;padding:1.5px 0;}
+  #tip .k{color:var(--ink2);} #tip .v{font-family:var(--mono);font-weight:600;}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:10px 2px 2px;font-size:12px;color:var(--ink2);}
+  .legend i{display:inline-block;width:16px;height:0;border-top:2.5px solid;vertical-align:middle;margin-right:5px;}
+  .foot{margin-top:16px;color:var(--muted);font-size:12px;line-height:1.75;}
+  .foot b{color:var(--ink2);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="kick">Strategy Equity &amp; Timing Alpha</div>
+      <h1>A股指数ETF期权 · 策略净值与择时超额
+        <span class="sub">完整仓位系统(双引擎入场: 恐慌抄底 + 趋势跟随 · 无底仓 · trailing出场 · GEX强化) · 含5bps换手成本</span></h1>
+    </div>
+    <div class="tabs" id="tabs"></div>
+  </header>
+  <div class="toolbar">
+    <span>区间</span>
+    <span class="rseg" id="rangeSeg"><button data-r="924" class="on">924以来</button><button data-r="all">全部</button></span>
+    <span style="color:var(--muted)">超额 = 策略 ÷ <b>等均仓恒定持仓</b>(剥离仓位水平, 看纯择时alpha)</span>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="board">
+    <div id="chart"><canvas id="base"></canvas><canvas id="overlay"></canvas><div id="tip"></div></div>
+    <div class="legend">
+      <span><i style="border-color:#1f4e79"></i>策略净值</span>
+      <span><i style="border-color:#9a958a"></i>满仓买入持有</span>
+      <span><i style="border-color:#bf7d16;border-top-style:dashed"></i>等均仓恒定持仓</span>
+    </div>
+  </div>
+
+  <div class="foot">
+    <b>怎么读"超额"</b>：直接比满仓的绝对收益不公平(策略并非时刻满仓)。真正证明<b>择时 alpha</b> 的是"策略 ÷ 等均仓恒定持仓"——同样的平均仓位，若策略跑赢恒定持仓，说明把仓位<b>放对了时候</b>(而非只是调仓位水平)。中间"择时超额/IR"卡片即此含义。<br>
+    <b>结论</b>：改用<b>无底仓 + 趋势持有</b>后，均仓自然升到 38–66%(资金使用率解决)，四标的择时超额全为正 +9.8~+21.8%；<b>科创50 由"择时有害"逆转为有益</b>(+17.5%)——它的 alpha 在趋势里，骑住即可。绝对收益仍低于满仓(择时的取舍)，换来夏普 1.7–2.3、回撤大幅收窄。研究用途，非交易建议。
+  </div>
+</div>
+
+<script>const DATA = /*__EQUITY_DATA__*/;</script>
+<script>
+const PANELS=[
+  {id:'nav', title:'净值曲线(起点=1)', h:250, lines:[
+    {k:'strat',c:'#1f4e79',w:2.0,lab:'策略'},{k:'bench',c:'#9a958a',w:1.3,lab:'满仓'},{k:'const',c:'#bf7d16',w:1.3,dash:true,lab:'等均仓'}]},
+  {id:'weight', title:'策略仓位水平(0=空仓, 100%=满仓)', h:110, ref:100, lines:[{k:'weight',c:'#1f6f5c',w:1.4,fillFrom:0,lab:'仓位'}]},
+  {id:'excess', title:'择时超额 · 策略÷等均仓恒定', h:120, ref:1.0, lines:[{k:'excess',c:'#2e7d46',w:1.6,fillFrom:1.0,lab:'超额'}]},
+  {id:'dd', title:'回撤', h:120, lines:[
+    {k:'dd',c:'#c0392b',w:1.4,fillFrom:0,lab:'策略回撤'},{k:'bdd',c:'#b8b3a8',w:1.2,lab:'满仓回撤'}]},
+];
+const PADL=56,PADR=16,PADT=20,PADB=6,GAP=12,DATEH=20;
+let CUR=null,LAYOUT=null,DPR=Math.max(1,devicePixelRatio||1),hoverI=-1,curKey=null,RANGE='924';
+const base=document.getElementById('base'),overlay=document.getElementById('overlay'),
+      chart=document.getElementById('chart'),tip=document.getElementById('tip'),
+      bctx=base.getContext('2d'),octx=overlay.getContext('2d');
+
+const tabs=document.getElementById('tabs');
+Object.keys(DATA).forEach((k,i)=>{const b=document.createElement('button');
+  b.className='tab'+(i===0?' on':'');b.textContent=DATA[k].name;b.dataset.k=k;
+  b.onclick=()=>{document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));b.classList.add('on');select(k);};
+  tabs.appendChild(b);});
+document.getElementById('rangeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  RANGE=b.dataset.r;document.querySelectorAll('#rangeSeg button').forEach(x=>x.classList.toggle('on',x===b));select(curKey);});
+
+function fmtDate(s){return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8);}
+function totalH(){return PANELS.reduce((a,p)=>a+p.h,0)+GAP*(PANELS.length-1)+PADT+PADB+DATEH;}
+
+function select(k){curKey=k;CUR=DATA[k].ranges[RANGE];buildCards(DATA[k].name);resize();onLeave();}
+
+function buildCards(name){
+  const s=CUR.stats;const ex=s.excess_ann;
+  const cards=document.getElementById('cards');
+  cards.innerHTML=`
+   <div class="grp"><div class="gt">策略</div>
+     <div class="big">${s.strat.ann}%<span style="font-size:13px;color:var(--muted)"> 年化</span></div>
+     <div class="kv"><span>夏普</span><b>${s.strat.sharpe}</b><span>回撤</span><b>${s.strat.mdd}%</b><span>Calmar</span><b>${s.strat.calmar}</b><span>均仓</span><b>${s.meanw}%</b></div></div>
+   <div class="grp"><div class="gt">满仓买入持有</div>
+     <div class="big" style="color:var(--gray)">${s.bench.ann}%<span style="font-size:13px;color:var(--muted)"> 年化</span></div>
+     <div class="kv"><span>夏普</span><b>${s.bench.sharpe}</b><span>回撤</span><b>${s.bench.mdd}%</b></div>
+     <div class="sub">绝对收益参照(策略以低仓换风控)</div></div>
+   <div class="grp hi"><div class="gt">择时超额 vs 等均仓</div>
+     <div class="big ${ex>=0?'pos':'neg'}">${ex>=0?'+':''}${ex}%</div>
+     <div class="kv"><span>信息比率 IR</span><b>${s.ir}</b><span>等均仓${s.meanw}%→</span><b>${s.const.ann}%</b></div>
+     <div class="sub">${ex>=2?'择时创造真实alpha(把仓位放对时候)':'择时几乎无超额·收益靠仓位水平'}</div></div>`;
+}
+
+function resize(){const W=chart.clientWidth,H=totalH();
+  [base,overlay].forEach(cv=>{cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+'px';cv.style.height=H+'px';});
+  chart.style.height=H+'px';bctx.setTransform(DPR,0,0,DPR,0,0);octx.setTransform(DPR,0,0,DPR,0,0);layout(W,H);render();}
+
+function ext(p){if(p.id==='weight')return [0,108];let lo=Infinity,hi=-Infinity;
+  for(const L of p.lines){for(const v of CUR[L.k]){if(v==null)continue;if(v<lo)lo=v;if(v>hi)hi=v;}}
+  if(p.ref!=null){lo=Math.min(lo,p.ref);hi=Math.max(hi,p.ref);}
+  if(lo===Infinity){lo=0;hi=1;}const pad=(hi-lo)*0.08||.1;return [lo-pad,hi+pad];}
+
+function layout(W,H){const plotW=W-PADL-PADR,n=CUR.dates.length;let y=PADT;const panels=[];
+  for(const p of PANELS){panels.push({...p,top:y,plotH:p.h,ex:ext(p)});y+=p.h+GAP;}
+  LAYOUT={W,H,plotW,n,panels,xAxisY:y-GAP+2,x:i=>PADL+(n<=1?0:i/(n-1))*plotW};}
+function yOf(p,v){const[lo,hi]=p.ex;return p.top+(1-(v-lo)/(hi-lo))*p.plotH;}
+
+function render(){if(!LAYOUT)return;const{W,H,plotW,n,panels}=LAYOUT;bctx.clearRect(0,0,W,H);
+  drawYearGrid();
+  for(const p of panels){
+    bctx.strokeStyle='#efece5';bctx.lineWidth=1;bctx.strokeRect(PADL,p.top,plotW,p.plotH);
+    // title
+    bctx.font='600 12px -apple-system,PingFang SC,sans-serif';const tw=bctx.measureText(p.title).width;
+    bctx.fillStyle='rgba(255,255,255,.82)';bctx.fillRect(PADL+4,p.top+3,tw+8,15);
+    bctx.fillStyle='#54524c';bctx.textAlign='left';bctx.textBaseline='top';bctx.fillText(p.title,PADL+7,p.top+5);
+    drawYTicks(p);
+    if(p.ref!=null)drawRef(p,p.ref);
+    for(const L of p.lines)drawLine(p,L);
+  }
+  drawDateAxis();
+}
+function drawYearGrid(){const{panels,n}=LAYOUT,top=PADT,bot=panels[panels.length-1].top+panels[panels.length-1].plotH;
+  let py=null;bctx.strokeStyle='#eeebe3';bctx.lineWidth=1;bctx.setLineDash([]);
+  for(let i=0;i<n;i++){const yr=CUR.dates[i].slice(0,4);if(yr!==py){if(py!==null){const x=LAYOUT.x(i);
+    bctx.beginPath();bctx.moveTo(x,top);bctx.lineTo(x,bot);bctx.stroke();}py=yr;}}}
+function fmtTick(p,v){if(p.id==='dd'||p.id==='weight')return v.toFixed(0)+'%';if(p.id==='excess')return v.toFixed(2);return v.toFixed(2);}
+function drawYTicks(p){const[lo,hi]=p.ex,vals=p.id==='weight'?[100,50,0]:[hi,(hi+lo)/2,lo];
+  bctx.textAlign='right';bctx.textBaseline='middle';bctx.font='10.5px "SF Mono",monospace';bctx.fillStyle='#a7a399';
+  for(const v of vals){const y=yOf(p,v);bctx.fillText(fmtTick(p,v),PADL-6,y);
+    bctx.strokeStyle='#f4f1ea';bctx.setLineDash([]);bctx.beginPath();bctx.moveTo(PADL,y);bctx.lineTo(PADL+LAYOUT.plotW,y);bctx.stroke();}}
+function drawRef(p,r){const y=yOf(p,r);bctx.strokeStyle='#c9c4b8';bctx.setLineDash([3,3]);
+  bctx.beginPath();bctx.moveTo(PADL,y);bctx.lineTo(PADL+LAYOUT.plotW,y);bctx.stroke();bctx.setLineDash([]);}
+function drawLine(p,L){const arr=CUR[L.k],n=LAYOUT.n;
+  if(L.fillFrom!=null){const yb=yOf(p,L.fillFrom);bctx.beginPath();let st=false,lx=PADL;
+    for(let i=0;i<n;i++){const v=arr[i];if(v==null)continue;const x=LAYOUT.x(i),y=yOf(p,v);
+      if(!st){bctx.moveTo(x,yb);bctx.lineTo(x,y);st=true;}else bctx.lineTo(x,y);lx=x;}
+    bctx.lineTo(lx,yb);bctx.closePath();bctx.fillStyle=L.c+'22';bctx.fill();}
+  bctx.beginPath();let st=false;
+  for(let i=0;i<n;i++){const v=arr[i];if(v==null){st=false;continue;}const x=LAYOUT.x(i),y=yOf(p,v);
+    if(!st){bctx.moveTo(x,y);st=true;}else bctx.lineTo(x,y);}
+  bctx.strokeStyle=L.c;bctx.lineWidth=L.w||1.3;bctx.lineJoin='round';
+  bctx.setLineDash(L.dash?[5,3]:[]);bctx.stroke();bctx.setLineDash([]);}
+function drawDateAxis(){const{n,xAxisY,plotW}=LAYOUT;bctx.fillStyle='#8f8b80';bctx.font='10.5px "SF Mono",monospace';bctx.textBaseline='top';
+  const ticks=Math.max(2,Math.min(9,Math.floor(plotW/64)));
+  for(let t=0;t<=ticks;t++){const i=Math.round(t/ticks*(n-1)),x=LAYOUT.x(i);
+    bctx.textAlign=t===0?'left':(t===ticks?'right':'center');bctx.fillText(fmtDate(CUR.dates[i]).slice(2),x,xAxisY+2);}}
+
+function drawCross(i){const{W,H,panels}=LAYOUT;octx.clearRect(0,0,W,H);if(i<0)return;
+  const x=LAYOUT.x(i),top=PADT,bot=panels[panels.length-1].top+panels[panels.length-1].plotH;
+  octx.strokeStyle='rgba(26,25,22,.42)';octx.setLineDash([4,3]);octx.beginPath();octx.moveTo(x,top);octx.lineTo(x,bot);octx.stroke();octx.setLineDash([]);
+  for(const p of panels)for(const L of p.lines){const v=CUR[L.k][i];if(v==null)continue;const y=yOf(p,v);
+    octx.beginPath();octx.arc(x,y,3,0,7);octx.fillStyle=L.c;octx.fill();octx.strokeStyle='#fff';octx.lineWidth=1.3;octx.stroke();}
+  const dt=fmtDate(CUR.dates[i]);octx.font='600 11px "SF Mono",monospace';const dw=octx.measureText(dt).width;
+  octx.fillStyle='#1a1916';octx.fillRect(x-dw/2-6,LAYOUT.xAxisY,dw+12,17);
+  octx.fillStyle='#fff';octx.textAlign='center';octx.textBaseline='middle';octx.fillText(dt,x,LAYOUT.xAxisY+9);}
+
+function showTip(i,mx){if(i<0){tip.style.display='none';return;}
+  let h=`<div class="td">${fmtDate(CUR.dates[i])}</div>`;
+  const rows=[['策略净值','strat','#1f4e79',v=>v.toFixed(3)],['满仓','bench','#9a958a',v=>v.toFixed(3)],
+    ['等均仓','const','#bf7d16',v=>v.toFixed(3)],['策略仓位','weight','#1f6f5c',v=>v.toFixed(0)+'%'],
+    ['择时超额','excess','#2e7d46',v=>'×'+v.toFixed(3)],
+    ['策略回撤','dd','#c0392b',v=>v.toFixed(1)+'%']];
+  for(const[lab,k,c,f]of rows){const v=CUR[k][i];if(v==null)continue;
+    h+=`<div class="row"><span class="k"><span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:${c};margin-right:5px"></span>${lab}</span><span class="v" style="color:${c}">${f(v)}</span></div>`;}
+  tip.innerHTML=h;tip.style.display='block';const tw=tip.offsetWidth,cw=chart.clientWidth;
+  let left=mx+16;if(left+tw>cw)left=mx-tw-16;if(left<0)left=6;tip.style.left=left+'px';tip.style.top='14px';}
+
+function nearest(mx){const{n,plotW}=LAYOUT;return Math.max(0,Math.min(n-1,Math.round((mx-PADL)/plotW*(n-1))));}
+function onMove(e){const r=chart.getBoundingClientRect();const mx=(e.touches?e.touches[0].clientX:e.clientX)-r.left;
+  const i=nearest(mx);if(i!==hoverI){hoverI=i;drawCross(i);}showTip(i,mx);}
+function onLeave(){hoverI=-1;drawCross(-1);tip.style.display='none';}
+chart.addEventListener('mousemove',onMove);chart.addEventListener('mouseleave',onLeave);
+chart.addEventListener('touchstart',e=>onMove(e),{passive:true});
+chart.addEventListener('touchmove',e=>{onMove(e);e.preventDefault();},{passive:false});
+addEventListener('resize',()=>{resize();if(hoverI>=0)drawCross(hoverI);});
+select(Object.keys(DATA)[0]);
+</script>
+</body>
+</html>

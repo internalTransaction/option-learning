@@ -1,0 +1,21 @@
+# 数据缓存(体积大, 可重新拉取)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+
+# 书籍/大文件
+*.pdf
+
+# OS
+.DS_Store
+
+# tushare token(私密)
+config/tushare_token.txt
