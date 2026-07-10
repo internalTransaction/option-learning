@@ -76,12 +76,16 @@
   <div class="entry">
     <a href="A股ETF期权_波动率择时信号台.html">
       <div class="t">① 波动率择时信号台 →</div>
-      <div class="d">主图价格 + 6个分位副图 + GEX + 建议仓位；十字光标逐日读数；恐慌灯/melt-up触发带。每天看该拿多少仓。</div>
+      <div class="d">主图价格 + 6个分位副图 + GEX + 建议仓位 + <b>今日期权动作提示</b>；十字光标逐日读数；恐慌灯/melt-up触发带。每天看该拿多少仓、做什么期权动作。</div>
       <div class="go">4标的 · 924以来/全部可切</div></a>
     <a href="A股ETF期权_策略净值超额.html">
       <div class="t">② 策略净值与择时超额 →</div>
-      <div class="d">策略 vs 满仓 vs 等均仓恒定；超额曲线 + 回撤子图；指标卡。验证策略值不值、有没有真alpha。</div>
+      <div class="d"><b>双策略对比</b>(纯期权择时 / HVWMA结合)；策略 vs 满仓 vs 等均仓恒定；超额+仓位+回撤子图。验证值不值、有没有真alpha。</div>
       <div class="go">含5bps成本 · IR信息比率</div></a>
+    <a href="A股股指ETF期权恐慌择时警告_研究总结.html">
+      <div class="t">③ 恐慌择时警告 · 研究总结 →</div>
+      <div class="d">五灯极值口径、灯数×回撤分档、924后回撤事件复盘的早期研究总结。</div>
+      <div class="go">研究依据 · 口径来源</div></a>
   </div>
 
   <h2>逻辑链条 · 六步 + 依据</h2>
@@ -99,30 +103,32 @@
       <div class="b">抄底 = 恐慌灯 + <b>动态跌幅</b>(20日动量的1年滚动分位，替代 hardcode −5/−8/−10%)。gate 随跌幅增大。</div>
       <div class="find"><b>消融证明</b>：控制跌幅后，"有灯 vs 无灯"胜率 40%→77%(中证1000)。跌幅=触发器、期权=质量过滤器，缺一不可。动态阈值还修掉了沪深300的不稳。</div></div>
     <div class="step"><div class="n">4</div>
-      <div class="h">建仓<span class="tag">无底仓</span></div>
-      <div class="b">buy = 恐慌度 × 跌幅门 × GEX调节；目标仓位 = ramp(buy)，越跌越恐慌越接近满仓。<b>无人为底仓</b>。</div>
-      <div class="find"><b>分段建仓测试</b>：离散3档≈5档≈连续爬坡(精细化零增量)；但纯跌幅分批(丢掉恐慌质量)明显更差——质量加权不能省。</div></div>
+      <div class="h">建仓<span class="tag">底仓30%+阈值</span></div>
+      <div class="b">buy = 恐慌度 × 跌幅门 × GEX调节；仓位 = 底仓30% + (1−30%)×ramp(buy)，越跌越恐慌越接近满仓。</div>
+      <div class="find"><b>分段建仓测试</b>：离散3档≈5档≈连续爬坡(精细化零增量)；但纯跌幅分批(丢掉恐慌质量)明显更差——质量加权不能省。底仓水平是"资金使用率 vs 风控"的连续权衡。</div></div>
     <div class="step warn"><div class="n">5</div>
-      <div class="h">出场<span class="tag">趋势持有</span></div>
-      <div class="b">抄底进场后<b>骑趋势</b>：未跌破持仓峰值×95%(trailing 5%)就保持仓位、不线性减；破位才走，melt-up过热降到15%。</div>
-      <div class="find"><b>逃顶做空被证伪</b>(波动率不对称：底有尖峰、顶无)——只做骑趋势+过热降仓，不反向开空。趋势持有让均仓自然升到 <b>38–66%</b>(资金使用率解决、不靠floor)。</div></div>
+      <div class="h">出场<span class="tag">棘轮+见顶</span></div>
+      <div class="b">入场快、出场慢:减仓每天最多降4%(棘轮,给反弹时间)，仅动量涨到高位或 melt-up 过热才快速兑现(降到15%)。避免"一抄底就平仓"。</div>
+      <div class="find"><b>逃顶做空被证伪</b>(波动率不对称:底有尖峰、顶无)——只做降仓,不反向开空。<b>另有变体</b>:无底仓+趋势持有(trailing) 让均仓自然升、科创吃到趋势——即净值报告里的 <b>HVWMA结合</b> 对比策略。</div></div>
     <div class="step"><div class="n">6</div>
       <div class="h">GEX增强<span class="tag">dealer gamma</span></div>
       <div class="b">GEX(dealer gamma敞口)作 buy 的连续调节：低GEX(空gamma·波动放大·剧烈capitulation)抄底加成、高GEX压制。K=0.4。</div>
       <div class="find"><b>正交增量</b>：GEX与现有因子几乎不相关(|r|&lt;0.3)；同样恐慌抄底，低GEX vs 高GEX 胜率大幅分离(中证1000 95% vs 47%)。A股无pin/价格点位效应，只作regime择时。</div></div>
   </div>
 
-  <h2>验证 · 择时超额(924以来, vs 等均仓恒定持仓)</h2>
+  <h2>验证 · 择时超额(924以来, vs 等均仓恒定持仓 · 纯期权模式)</h2>
   <table>
-    <tr><th>标的</th><th>性格</th><th>均仓</th><th>年化</th><th>夏普</th><th>回撤</th><th>择时超额(IR)</th></tr>
-    <tr><td>沪深300ETF</td><td>趋势型</td><td class="mono">66%</td><td class="mono">29.3%</td><td class="mono">1.70</td><td class="mono">−10.1%</td><td class="pos">+14.6% (1.46)</td></tr>
-    <tr><td>中证1000</td><td>均值回归(TS紧)</td><td class="mono">66%</td><td class="mono">36.2%</td><td class="mono">1.94</td><td class="mono">−11.4%</td><td class="pos">+9.8% (0.47)</td></tr>
-    <tr><td>科创50</td><td>强趋势(骑住)</td><td class="mono">38%</td><td class="mono">47.9%</td><td class="mono">2.07</td><td class="mono">−13.0%</td><td class="pos">+17.5% (0.83)</td></tr>
-    <tr><td>创业板</td><td>趋势型</td><td class="mono">62%</td><td class="mono">63.6%</td><td class="mono">2.30</td><td class="mono">−10.5%</td><td class="pos">+21.8% (0.85)</td></tr>
+    <tr><th>标的</th><th>均仓</th><th>年化</th><th>夏普</th><th>回撤</th><th>择时超额</th><th>HVWMA结合(对比)</th></tr>
+    <tr><td>沪深300ETF</td><td class="mono">48%</td><td class="mono">19.4%</td><td class="mono">1.85</td><td class="mono">−5.6%</td><td class="pos">+8.9%</td><td class="mono">1.24夏普(纯期权更优)</td></tr>
+    <tr><td>中证1000</td><td class="mono">45%</td><td class="mono">28.0%</td><td class="mono">1.91</td><td class="mono">−10.4%</td><td class="pos">+10.8%</td><td class="pos">2.14夏普/超额+21.7%</td></tr>
+    <tr><td>科创50</td><td class="mono">43%</td><td class="mono">34.6%</td><td class="mono">1.75</td><td class="mono">−12.9%</td><td class="neg">−0.6%</td><td class="pos">超额+4.2%(吃到趋势)</td></tr>
+    <tr><td>创业板</td><td class="mono">44%</td><td class="mono">39.5%</td><td class="mono">2.02</td><td class="mono">−10.9%</td><td class="pos">+10.9%</td><td class="pos">超额+18.3%</td></tr>
   </table>
   <p class="lead" style="font-size:13px;margin-top:10px">
-    "择时超额" = 策略 vs <b>同均仓恒定持仓</b>(剥离仓位水平)——四标的全正，证明是把仓位放对时候的真alpha，而非只是降仓。
-    绝对收益仍低于满仓(择时取舍)，换来夏普 1.7–2.3、回撤大幅收窄。<b>科创50</b> 之前线性减仓下"择时有害"，改骑趋势后逆转为 +17.5%——它的alpha在趋势里。</p>
+    "择时超额" = 策略 vs <b>同均仓恒定持仓</b>(剥离仓位水平)——证明是把仓位放对时候的真alpha，而非只是降仓。
+    上表为<b>纯期权模式</b>(信号台建议仓位默认逻辑:恐慌灯×动态跌幅 + GEX + 底仓30% + 棘轮出场)。
+    <b>科创50 纯期权模式择时无用</b>(−0.6%,melt-up 强趋势),但净值报告里切到 <b>HVWMA结合</b>(趋势打底+期权抄底)可改善(见右列);
+    沪深300 则纯期权更优(它震荡、HVWMA whipsaw)。两套策略可在净值报告顶部切换对比。</p>
 
   <h2>核心结论速记</h2>
   <div class="grid2">
@@ -132,6 +138,7 @@
       <li><span>动态阈值(分位) &gt; hardcode</span><span class="f">自适应+可比</span></li>
       <li><span>无底仓+趋势持有 &gt; 底仓+线性减</span><span class="f">均仓↑超额↑</span></li>
       <li><span>GEX正交增量，只作regime</span><span class="f">非价格点位</span></li>
+      <li><span>对冲: 低IV买put/过热减仓</span><span class="f">别过热买put</span></li>
       <li><span>模型保持简单(连续≈离散)</span><span class="f">别上XGBoost</span></li>
     </ul></div>
     <div class="kb"><h3>关键参数</h3><ul>
@@ -143,6 +150,22 @@
       <li><span class="f">趋势止损 TS / 过热仓</span><span class="v">5% / 15%</span></li>
       <li><span class="f">换手成本</span><span class="v">5 bps</span></li>
     </ul></div>
+  </div>
+
+  <h2>期权动作与对冲(信号台"今日动作"依据)</h2>
+  <div class="flow">
+    <div class="step"><div class="n">🟢</div>
+      <div class="h">恐慌 → 抄底 / 买 call</div>
+      <div class="b">恐慌灯 + 跌到位。期权买方的<b>主场</b>:IV 即将见顶回落、方向与 vega 都顺。</div>
+      <div class="find"><b>依据</b>:恐慌抄底历史胜率 ~63–77%,低 GEX 时反弹更猛。</div></div>
+    <div class="step warn"><div class="n">🟣</div>
+      <div class="h">过热 → 减仓,别买 put</div>
+      <div class="b">melt-up 过热时买 put 是灾难——方向错(还涨)+ 高 IV 买贵 + IV 回落/theta 三杀。</div>
+      <div class="find"><b>依据</b>:科创过热买 ATM put 持 20 日均值 −55%、赔率 0.62;对冲科创下行改用<b>做空中证1000(IM)或减仓</b>(beta 中性、不赌方向,回撤 −5.1%→−1.2%)。</div></div>
+    <div class="step"><div class="n">🔵</div>
+      <div class="h">低波 → 布局 2 周 put 保险</div>
+      <div class="b">保险要在<b>天晴时买</b>:低 IV 时 put 便宜、且 IV 有上升空间。优先<b>创业板 / 沪深300</b>,持约 2 周。</div>
+      <div class="find"><b>依据</b>:低 IV 买 put(2周)—— 创业板 +15.6% / 沪深300 打平 / 科创 +1.3%,实际赔率≈盈亏平衡;高 IV 买则 −10~−38%。<b>换时机+持有期解决了"赔率胜率不匹配"</b>,而非调行权价。</div></div>
   </div>
 
   <h2>数据与脚本</h2>
@@ -158,6 +181,7 @@
       <li><span>topping_dynamic / second_order</span><span class="f">逃顶(证伪)</span></li>
       <li><span>exit_trailing / ts_scan</span><span class="f">趋势持有定参</span></li>
       <li><span>gex_enhance / gex_position</span><span class="f">GEX强化+接入</span></li>
+      <li><span>lowvol_put / cross_hedge / put_*</span><span class="f">对冲时机研究</span></li>
     </ul></div>
   </div>
 
