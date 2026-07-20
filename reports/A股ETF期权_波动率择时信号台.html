@@ -130,7 +130,6 @@
       <span class="band-note"><i style="background:rgba(192,57,43,.30);border:1px solid var(--red)"></i>红·重仓 <b>≥3灯 且 ≤.04</b></span>
       <span class="band-note"><i style="background:rgba(124,58,173,.20);border:1px solid #7c3aad"></i>紫·melt-up过热 <b>降仓警示·非做空</b></span>
     </div>
-    <b>建议仓位</b>＝无底仓＋<b>双引擎入场</b>＋趋势持有：目标仓位取二者大 —— <b>恐慌抄底</b>(五灯恐慌度×跌幅门×GEX，跌+恐慌才进) 或 <b>趋势跟随</b>(20日动量分位 0.55→0.90满，涨势中持仓)；<b>持有靠骑趋势</b>——未跌破持仓峰值×95%(趋势止损5%)就保持、<b>不线性减</b>，破位才走；melt-up 过热只作警示带、<b>不再压制仓位</b>。回测(924后)：均仓升到 78–95%(顺带解决资金使用率)、择时超额(vs等均仓)多数 +10~39%、夏普 1.7–2.0。<b>加趋势入场修复了科创牛市踏空</b>(2025下半年 +105% 那波，均仓 0%→62%)；代价是回撤普遍增大(吃趋势的必然)。<br>
     <b>GEX 强化(K=0.4)</b>：dealer gamma 敞口作仓位调节——低 GEX(空 gamma·波动放大·剧烈 capitulation)抄底加成、高 GEX(温吞恐慌)压制。与现有因子几乎正交(|r|&lt;0.3)，是独立增量：接入后中小盘夏普 +0.1~0.17、回撤不增(沪深300 无感)。GEX 只作 regime 择时，A股无 pin/价格点位效应。<br>
     <b>抄底触发＝灯数＋动态跌幅双条件</b>。跌幅闸门已从 hardcode −5/−8/−10% 换成<b>20日动量的1年滚动分位</b>（≤.15/.08/.04＝"跌得比过去约85%/92%/96%的时候都狠"），自适应波动环境、不同标的可比，且修掉了沪深300全样本的不稳。只有灯亮不够、需同时跌到位才着色，"正常态"大部分时间不触发。<br>
     <b>紫色 melt-up 过热区</b>（高位＋IV分位≥.75＋VRP分位≥.75）：实证显示这不是逃顶做空信号（其后20日科创/创业板平均仍 +9~11%），仅作<b>过热降仓/收紧止盈</b>提示——波动率是情绪强度、方向仍看价格动量。<br>
@@ -148,8 +147,6 @@ const DATA = {"hs300":{"dates":["20200102","20200103","20200106","20200107","202
 /* ---------------- panel spec ---------------- */
 const PANELS = [
   {key:'price', title:'标的价格', h:200, color:'#1f4e79', fill:true, nd:v=>fmtPrice(v), main:true},
-  // 建议仓位: 阈值建仓+底仓, 越跌越恐慌加越多, melt-up过热降仓
-  {key:'weight', title:'建议仓位', tag:'无底仓·双引擎入场·骑趋势', h:92, color:'#1f6f5c', weightMode:true},
   // 副图统一画"滚动百分位"(0~1), 点线为 0.90/0.10 极值阈值; dir 标注该指标的恐慌极值方向
   {key:'iv_pct',    raw:'atm_iv', title:'ATM IV · 分位',  tag:'≥90 恐慌买保护',   h:98, color:'#8e44ad', pctMode:true, dir:'high'},
   {key:'sent_pct',  raw:'sent',   title:'情绪比 · 分位',   tag:'≥90 抢认沽',       h:98, color:'#c0392b', pctMode:true, dir:'high'},
@@ -164,7 +161,6 @@ const PADL=58, PADR=54, PADT=20, PADB=6, GAP=10, DATEH=20;
 
 /* readout chips (order + labels) */
 const CHIPS = [
-  {key:'weight',lab:'建议仓位',c:'#1f6f5c',f:v=>(v*100).toFixed(0)+'%',big:true},
   {key:'price',lab:'价格',c:'#1f4e79',f:v=>fmtPrice(v)},
   {key:'atm_iv',lab:'ATM IV',c:'#8e44ad',f:v=>pct1(v),p:'iv_pct'},
   {key:'sent',lab:'情绪比',c:'#c0392b',f:v=>v.toFixed(3),p:'sent_pct'},
@@ -591,8 +587,8 @@ function actionAt(i){
   if(iv!=null&&iv<=0.25) return {cls:'act-insure', ico:'🔵', tag:'低波 · 可布局 2 周 put 保险',
     why:`IV 分位 ${pp(iv)}(平静、保险便宜)。天晴时买伞:优先<b>创业板 / 沪深300</b> 的近月 ATM put,持约 2 周。`,
     odds:'低IV买put(2周)历史: 创业板 +15.6% / 沪深300 打平 / 赔率≈盈亏平衡'};
-  return {cls:'act-hold', ico:'⚪', tag:'常态 · 按建议仓位持有',
-    why:`无极值信号(动量分位 ${pp(mp)} · IV 分位 ${pp(iv)})。跟随上方"建议仓位",不额外动作。`, odds:''};
+  return {cls:'act-hold', ico:'⚪', tag:'常态 · 持有观望',
+    why:`无极值信号(动量分位 ${pp(mp)} · IV 分位 ${pp(iv)})。无恐慌抄底 / 过热 / 低波保险信号,不额外动作。`, odds:''};
 }
 function updateAction(i){
   const el=document.getElementById('action');
