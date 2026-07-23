@@ -117,7 +117,8 @@ def main() -> None:
         if gexf.exists():
             G = json.load(open(gexf))
             gz = {d: z for d, z in zip(G["date"], G["gex_z"])}
-            rec["gex_z"] = [round(gz[d], 3) if gz.get(d) is not None else None for d in rec["dates"]]
+            rec["gex_z"] = [round(gz[d], 3) if isinstance(gz.get(d), (int, float)) and np.isfinite(gz[d]) else None
+                            for d in rec["dates"]]
         else:
             rec["gex_z"] = [None] * len(rec["dates"])
         out[key] = rec
@@ -125,7 +126,7 @@ def main() -> None:
               f"{rec['dates'][0]}->{rec['dates'][-1]}  ({found.path.name})")
 
     dest = PROC / "timing_viz.json"
-    dest.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
+    dest.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":"), allow_nan=False))
     kb = dest.stat().st_size / 1024
     print(f"写出 {dest}  ({kb:.0f} KB)")
 
