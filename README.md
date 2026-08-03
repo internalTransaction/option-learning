@@ -1,80 +1,51 @@
-# A股指数ETF期权择时信号研究
+# A股指数ETF期权 · 波动率择时与仓位系统
 
-利用 A 股宽基 **ETF 期权** 蕴含的市场预期信息（隐含波动率、情绪、偏度），
-构建对**标的指数的择时信号**并回测其有效性。
+用 A 股宽基 **ETF 期权的波动率曲面**刻画市场恐慌/贪婪,为**个股组合做仓位管理**(择时加减仓,非做空),
+并研究期权买方/对冲的时机。核心定位:**期权数据是"质量过滤器",不是方向预测器**——
+它擅长在别人恐慌时判断"这波跌该不该抄",而不是预测涨跌。
 
-研究标的：沪深300ETF(510300)、科创50ETF(588000)、创业板ETF(159915)。
-数据源：[AkShare](https://akshare.akfamily.xyz/)（免费，无需注册）。
+研究标的:沪深300ETF(510300)、中证1000(000852)、科创50ETF(588000)、创业板ETF(159915)。
+数据源:Tushare 历史期权链 → 重建波动率曲面。分析窗口默认聚焦 **2024-09-24(924 行情起点)** 之后。
 
-## 核心逻辑
+## 报告(自包含 HTML,`reports/`)
 
-期权价格里藏着现货看不到的信息，本项目把它们提炼成三类因子并转成择时信号：
+先开 **`期权择时系统_总览与导航.html`** —— 整条逻辑链、参数、研究依据的导航页,并链到:
 
-| 因子类 | 模块 | 直觉 |
-|--------|------|------|
-| **波动率** | `factors/volatility.py` | IV 水平/百分位、IV−HV 方差风险溢价、期限结构。恐慌高 IV 常见阶段底，自满低 IV 累积风险。 |
-| **情绪/持仓** | `factors/sentiment.py` | PCR（认沽/认购比），成交量 PCR 反映短期情绪，持仓 PCR 反映仓位结构。 |
-| **偏度/微笑** | `factors/skew.py` | 虚值 put 相对 call 的 IV 溢价，反映市场为下跌尾部风险付的价。 |
+| 报告 | 内容 |
+|------|------|
+| **波动率择时信号台** | 主图价格 + 6 个分位副图 + GEX + 建议仓位 + **今日期权动作提示**;十字光标逐日读数;恐慌灯/melt-up 触发带。4 标的、924以来/全部可切。 |
+| **策略净值与择时超额** | **双策略对比**(纯期权择时 / HVWMA结合) + 净值/仓位/超额/回撤子图;vs 满仓、vs 等均仓恒定;含 5bps 成本。 |
+| **恐慌择时警告 · 研究总结** | 五灯极值口径与事件复盘的早期研究总结。 |
 
-> ⚠️ 信号方向（逆向 vs 顺势）与阈值都是**待回测校验的假设**，不是结论。先搭框架，再用数据证伪/校准。
+## 核心结论速记
 
-## 目录结构
-
-```
-config/config.yaml       标的、因子、信号、回测参数
-src/
-  data/                  akshare 数据层 + 本地缓存
-  factors/               波动率 / 情绪 / 偏度因子(含 base 基类)
-  signals/               因子 -> 择时信号
-  backtest/              向量化回测引擎 + 绩效
-  utils/                 配置、日志
-scripts/
-  fetch_data.py          拉取并缓存历史数据
-  run_signal.py          端到端: 数据->因子->信号->回测
-tests/                   合成数据冒烟测试(不联网)
-data/                    缓存(raw/processed, 不入库)
-notebooks/               探索性分析
-```
+- **期权信号是条件性 alpha**:五灯单独无领先性(没跌之前假信号多),但控制跌幅后有强增量(中证1000 有灯 vs 无灯胜率 40%→77%)。跌幅=触发器、期权=质量过滤器。
+- **擅抄底、不擅逃顶**(波动率不对称:底有 capitulation 尖峰、顶是低波 grind)。逃顶只做降仓,不反向开空。
+- **动态阈值(滚动分位)> hardcode**;**无底仓 + 趋势持有** 让均仓自然升、超额不降;**GEX 正交增量**(低 GEX 恐慌抄底反弹更猛),只作 regime 择时,A股无 pin。
+- **对冲**:过热(高IV)买 put 是灾难(方向错+买贵+IV回落三杀);正解是**低 IV(平静)时买 2 周 put 保险**(创业板/沪深300 最优、赔率才匹配);对冲科创下行用**做空中证1000(IM 期货)或直接减仓**;期权买方主场在**恐慌抄底买 call**。
+- **模型保持简单**:连续指数 ≈ 离散三档,ML 仅用 Lasso 做因子筛选,别上 XGBoost。
 
 ## 快速开始
 
 ```bash
 pip install -r requirements.txt
 
-# 1. 拉取历史数据(QVIX 波动率指数 + ETF 日线)
-python -m scripts.fetch_data
+# 一键重算数据 + 注入所有 HTML 报告(build_gex → build_timing_viz → build_equity → inject)
+python scripts/refresh_reports.py
 
-# 更新到数据源当前已落库的最新交易日，并刷新报告
-python scripts/update_latest_data.py
-
-# 2. 端到端跑一个波动率择时信号并回测(默认沪深300)
-python -m scripts.run_signal              # 逆向: 高IV看多
-python -m scripts.run_signal --key kc50 --trend
-
-# 3. 冒烟测试(不联网)
-python -m pytest -q
+# 拉取/更新上游原始数据(需 Tushare token: config/tushare_token.txt)
+python -m scripts.fetch_data --refresh
 ```
 
-## 数据说明
+HVWMA 趋势引擎目前用日线近似;精确 3H 版需 60min 分钟数据(`scripts/fetch_intraday.py`,受 `stk_mins` 限频)。
 
-| 数据 | 接口 | 性质 |
-|------|------|------|
-| 隐含波动率指数 QVIX | `index_option_*_qvix` | 历史序列(2015 至今)，波动率因子主干 |
-| 标的 ETF 日线 | `fund_etf_hist_em` | 历史序列，算 HV 与回测收益 |
-| 全市场期权链 | `option_current_em` | **当日实时快照**，PCR/偏度需按日累积落盘 |
+## 脚本(`scripts/`)
 
-因为 PCR 与偏度依赖逐日期权链快照，建议用定时任务每个交易日收盘后跑
-`python -m scripts.fetch_data --snapshot` 累积历史，再启用情绪/偏度因子的时序计算。
+- **数据管线**:`build_surface`(期权链→曲面)· `build_gex`(dealer GEX + max-OI)· `build_timing_viz`(可视化数据,含 GEX 并入)· `build_equity`(双策略净值/超额)· `refresh_reports`(一键重算+注入)
+- **研究**:`ablation_lights_vs_drawdown`(灯×跌幅消融)· `topping_dynamic/second_order`(逃顶,证伪)· `exit_logic/exit_trailing`(出场)· `floor_sweep`(底仓权衡)· `gex_enhance/gex_position`(GEX 强化+接入)· `hvwma_strategy/build_hvwma_3h`(HVWMA 趋势引擎)
+- **对冲研究**:`put_on_overheat`(过热买put)· `cross_hedge`(代理品种对冲)· `cross_put_hedge`(跨品种 put)· `lowvol_put`(低IV买put时机)· `put_hedge_moneyness`(虚值凸性)
 
-当前报告使用 Tushare 历史期权日线重建 surface。日常更新优先跑
-`python scripts/update_latest_data.py`：脚本会自动识别最新已落库交易日，只补缺失日期，
-再刷新 `timing_viz.json`、`equity.json` 和 HTML 报告。
+## 免责
 
-## 路线图
-
-- [x] 项目框架、数据层、三类因子接口、波动率择时端到端跑通
-- [ ] 定时累积期权链快照，启用 PCR / 偏度时序因子
-- [ ] 波动率期限结构因子（近月 vs 次月 IV）
-- [ ] 多因子合成与参数网格回测、样本外验证
-- [ ] 信号可视化 notebook 与绩效报告
-```
+研究性总结。所有胜率/夏普/超额基于历史样本回测(含 5bps 成本),样本有限(924 后约 21 个月、以 V 型急反弹为主),
+极值样本成簇、小样本高胜率需打折看待。**不构成投资建议。**
