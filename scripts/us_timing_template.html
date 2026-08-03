@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>美股指数期权 · 波动率择时信号台</title>
+<style>
+  :root{
+    --paper:#f6f5f1; --card:#ffffff; --card2:#faf9f6;
+    --ink:#1a1916; --ink2:#54524c; --muted:#928f86; --line:#e7e4db; --line2:#efece5;
+    --brand:#1f4e79; --brand-soft:#eaf0f6;
+    --red:#c0392b; --red-bg:rgba(192,57,43,.09);
+    --green:#2e7d46; --green-bg:rgba(46,125,70,.09);
+    --amber:#bf7d16;
+    --grid:#ece9e1;
+    --r:12px; --r-sm:8px;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    --font-display:"Iowan Old Style","Palatino Linotype",Georgia,"Songti SC",serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Segoe UI,Roboto,sans-serif;
+    font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;
+    font-variant-numeric:tabular-nums;}
+  .wrap{max-width:1220px;margin:0 auto;padding:26px 22px 60px;}
+  header{display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px 24px;
+    border-bottom:1px solid var(--line);padding-bottom:18px;margin-bottom:18px;}
+  h1{margin:0;font-size:22px;font-weight:700;letter-spacing:.2px;}
+  h1 .sub{display:block;font-size:12.5px;font-weight:500;color:var(--muted);margin-top:5px;letter-spacing:.3px;}
+  .kick{font-family:var(--font-display);font-style:italic;color:var(--brand);font-size:13px;}
+
+  /* underlying tabs */
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;}
+  .tab{border:1px solid var(--line);background:var(--card);color:var(--ink2);
+    padding:7px 15px;border-radius:20px;font-size:13.5px;cursor:pointer;font-weight:500;
+    transition:all .15s;}
+  .tab:hover{border-color:#d8d4c8;color:var(--ink);}
+  .tab.on{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:600;}
+
+  /* legend / readout */
+  .action{display:flex;align-items:center;gap:12px;border-radius:var(--r);padding:12px 16px;margin:2px 0 14px;
+    border:1px solid var(--line);background:var(--card);}
+  .action .ico{font-size:22px;line-height:1;}
+  .action .body{flex:1;min-width:0;}
+  .action .tag{font-weight:700;font-size:15px;letter-spacing:.02em;}
+  .action .why{font-size:12.5px;color:var(--ink2);margin-top:2px;line-height:1.55;}
+  .action .odds{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .action.act-buy{background:var(--red-bg);border-color:var(--red);} .action.act-buy .tag{color:var(--red);}
+  .action.act-trim{background:rgba(124,58,173,.08);border-color:#7c3aad;} .action.act-trim .tag{color:#7c3aad;}
+  .action.act-insure{background:var(--brand-soft);border-color:var(--brand);} .action.act-insure .tag{color:var(--brand);}
+  .action.act-hold{background:var(--card2);} .action.act-hold .tag{color:var(--ink2);}
+  .readout{display:flex;flex-wrap:wrap;gap:6px 8px;margin:2px 0 16px;}
+  .chip{display:inline-flex;align-items:baseline;gap:6px;background:var(--card);
+    border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 11px;font-size:12.5px;
+    box-shadow:0 1px 1px rgba(20,18,14,.03);}
+  .chip .lab{color:var(--muted);font-size:11.5px;}
+  .chip .val{font-family:var(--mono);font-weight:600;font-size:13px;}
+  .chip .dot{width:8px;height:8px;border-radius:2px;align-self:center;}
+  .chip.big{background:#eef5f2;border-color:#bfe0d4;padding:6px 14px;}
+  .chip.big .lab{color:#1f6f5c;font-weight:600;}
+  .chip.big .val{font-size:16px;color:#1f6f5c;}
+  #curdate{font-family:var(--mono);font-weight:600;color:var(--brand);}
+
+  .board{background:var(--card);border:1px solid var(--line);border-radius:var(--r);
+    box-shadow:0 1px 2px rgba(20,18,14,.04),0 8px 26px rgba(20,18,14,.05);
+    padding:8px 8px 4px;position:relative;}
+  #chart{position:relative;width:100%;cursor:crosshair;touch-action:none;}
+  #chart canvas{display:block;position:absolute;left:0;top:0;width:100%;}
+  #overlay{pointer-events:none;}
+  #tip{position:absolute;pointer-events:none;z-index:9;min-width:150px;
+    background:rgba(255,255,255,.97);border:1px solid var(--line);border-radius:8px;
+    box-shadow:0 6px 22px rgba(20,18,14,.16);padding:9px 11px;font-size:12px;display:none;}
+  #tip .td{font-family:var(--mono);font-weight:700;color:var(--brand);font-size:12.5px;
+    margin-bottom:6px;border-bottom:1px solid var(--line2);padding-bottom:5px;}
+  #tip .row{display:flex;justify-content:space-between;gap:14px;padding:1.5px 0;}
+  #tip .row .k{color:var(--ink2);}
+  #tip .row .v{font-family:var(--mono);font-weight:600;}
+  #tip .row .pc{color:var(--muted);font-size:10.5px;margin-left:5px;}
+
+  .foot{margin-top:16px;color:var(--muted);font-size:12px;line-height:1.75;}
+  .foot b{color:var(--ink2);font-weight:600;}
+  .swatch{display:inline-block;width:22px;height:0;border-top:2px solid;vertical-align:middle;margin:0 3px;}
+  .band-note{display:inline-flex;align-items:center;gap:5px;margin-right:14px;}
+  .band-note i{width:14px;height:11px;border-radius:2px;display:inline-block;}
+  .toolbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    margin:2px 2px 12px;font-size:12.5px;color:var(--ink2);}
+  .toolbar label{display:inline-flex;align-items:center;gap:5px;cursor:pointer;user-select:none;}
+  .rseg{display:inline-flex;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--card);}
+  .rseg button{border:0;background:transparent;color:var(--ink2);font:inherit;font-size:12.5px;
+    padding:4px 13px;cursor:pointer;transition:all .15s;}
+  .rseg button.on{background:var(--brand);color:#fff;font-weight:600;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="kick">US Index Option Volatility Timing Desk</div>
+      <h1>美股指数期权 · 波动率择时信号台
+        <span class="sub">SPY / QQQ / SOXX · 价格主图 + 波动率结构分位副图 · 十字光标联动逐点读数 · 恐慌灯×动态跌幅触发 + melt-up过热警示</span>
+      </h1>
+    </div>
+    <div class="tabs" id="tabs"></div>
+  </header>
+
+  <div class="toolbar">
+    <span>当前标的 <b id="curname"></b> · 日期 <span id="curdate">—</span></span>
+    <span class="rseg" id="rangeSeg">
+      <button data-r="recent" class="on">近1年</button><button data-r="all">全部</button>
+    </span>
+    <span class="rseg" id="subSeg">
+      <button data-m="pct" class="on">副图·分位</button><button data-m="raw">副图·原值</button>
+    </span>
+    <label><input type="checkbox" id="tgBand"> 触发带（灯+动态跌幅/过热·默认关）</label>
+    <span style="color:var(--muted)">鼠标移动查看逐点数值 · 触屏可拖动</span>
+  </div>
+
+  <div class="action" id="action"></div>
+  <div class="readout" id="readout"></div>
+
+  <div class="board">
+    <div id="chart">
+      <canvas id="base"></canvas>
+      <canvas id="overlay"></canvas>
+      <div id="tip"></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div style="margin-bottom:8px">
+      <span class="band-note"><i style="background:rgba(191,125,22,.20);border:1px solid #bf7d16"></i>黄·关注 <b>≥1灯 且 动量分位≤.15</b></span>
+      <span class="band-note"><i style="background:rgba(211,84,0,.25);border:1px solid #d35400"></i>橙·加注 <b>≥2灯 且 ≤.08</b></span>
+      <span class="band-note"><i style="background:rgba(192,57,43,.30);border:1px solid var(--red)"></i>红·重仓 <b>≥3灯 且 ≤.04</b></span>
+      <span class="band-note"><i style="background:rgba(124,58,173,.20);border:1px solid #7c3aad"></i>紫·melt-up过热 <b>降仓警示·非做空</b></span>
+    </div>
+    <b>抄底触发＝灯数＋动态跌幅双条件</b>。跌幅闸门用<b>20日动量的1年滚动分位</b>（≤.15/.08/.04＝"跌得比过去约85%/92%/96%的时候都狠"），自适应各标的波动环境。只有灯亮不够、需同时跌到位才着色，"正常态"大部分时间不触发。<br>
+    <b>紫色 melt-up 过热区</b>（高位＋IV分位≥.75＋VRP分位≥.75）：这不是逃顶做空信号，波动率是情绪强度、方向仍看价格动量，仅作<b>过热降仓/收紧止盈</b>提示。<br>
+    <b>副图可切「分位 / 原值」</b>：分位看极值触发(0.90/0.10 阈值线 + 红点)，原值看指标真实量级(分位长时间处于极端会钝化、原值不会)。
+    <b>恐慌五灯</b>（63日滚动分位，阈值 0.90 / 0.10）：高IV 分位≥0.90 · 情绪比 分位≥0.90 · RR 分位≤0.10 · 微笑斜率 分位≤0.10 · VRP 分位≤0.10。
+    <b>副图</b>为各指标的 63 点<b>滚动百分位</b>(0~1)，两条点线为 0.90 / 0.10 阈值，红色那条即该指标的恐慌触发边、红点为穿越极值的时点。
+    十字光标 tooltip 给出原始数值。原始指标含义：情绪比 = 25Δ认沽IV/认购IV；RR = 25Δ风险反转；VRP = ATM IV − 20日已实现波动；ATM IV 用 put-call parity 隐含远期为基准、BS 从虚值合约收盘价反解。<br>
+    <b style="color:#6c5ce7">回测新增因子(尾部/二阶恐慌家族)</b>：<b>VVIX(波动的波动)</b>=ATM IV 自身的已实现波动, 二阶恐慌, 极高常在capitulation拐点(SOXX上VVIX≥.90×跌幅门20日超额+9.8%)；<b>凸度/蝶式</b>=微笑弯曲度=尾部定价；<b>下行VRP</b>=ATM IV−下行已实现半波动(Bollerslev/Feunou: bad VRP 才是真正预测项)。回测显示这三者(尤其VVIX)优于PCR/情绪比，<b>目前仅展示、暂不计入五灯</b>(计入需重新校准触发档位)。<br>
+    <b style="color:#c0392b">框架移植说明</b>：五灯/触发档位口径与 A 股系统一致，是结构性信号；<b>美股回测(2024-08~2026-07, ~2年)证据非证明</b>：条件alpha(跌幅×期权恐慌)成立、逃顶无效。动作提示描述历史逻辑、非交易建议。
+    <div style="margin-top:6px;color:#b0aca2">数据：Polygon(期权链快照 + 逐合约K线) 构建波动率曲面 · 研究用途，非交易建议。</div>
+  </div>
+</div>
+
+<script>
+const DATA = /*__TIMING_DATA__*/;
+</script>
+<script>
+/* ---------------- panel spec ---------------- */
+const PANELS = [
+  {key:'price', title:'标的价格', h:200, color:'#1f4e79', fill:true, nd:v=>fmtPrice(v), main:true},
+  // 副图统一画"滚动百分位"(0~1), 点线为 0.90/0.10 极值阈值; dir 标注该指标的恐慌极值方向
+  {key:'iv_pct',    raw:'atm_iv', title:'ATM IV',  tag:'≥90 恐慌买保护',   h:98, color:'#8e44ad', pctMode:true, dir:'high', nd:v=>pct1(v)},
+  {key:'sent_pct',  raw:'sent',   title:'情绪比',   tag:'≥90 抢认沽',       h:98, color:'#c0392b', pctMode:true, dir:'high', nd:v=>v.toFixed(3)},
+  {key:'rr_pct',    raw:'rr',     title:'RR·25Δ',   tag:'≤10 下跌偏斜极端',  h:94, color:'#16847e', pctMode:true, dir:'low',  nd:v=>v.toFixed(4)},
+  {key:'slope_pct', raw:'slope',  title:'微笑斜率', tag:'≤10 尾部恐惧',      h:94, color:'#bf7d16', pctMode:true, dir:'low',  nd:v=>v.toFixed(3)},
+  {key:'vrp_pct',   raw:'vrp',    title:'VRP',      tag:'≤10 capitulation', h:94, color:'#2e7d46', pctMode:true, dir:'low',  nd:v=>v.toFixed(3)},
+  {key:'pcr_pct',   raw:'pcr',    title:'PCR',      tag:'辅助·不计灯',       h:90, color:'#5d6d7e', pctMode:true, dir:null,  nd:v=>v.toFixed(3)},
+  // —— 回测新增(美股): VVIX波动的波动 / 凸度蝶式 / 下行VRP。目前仅展示, 不计入五灯 ——
+  {key:'vvix_pct',  raw:'vvix',   title:'波动的波动 VVIX', tag:'≥90 二阶恐慌·抄底强', h:92, color:'#6c5ce7', pctMode:true, dir:'high', nd:v=>pct1(v)},
+  {key:'conv_pct',  raw:'conv',   title:'凸度·蝶式',       tag:'≥90 尾部定价',        h:90, color:'#e67e22', pctMode:true, dir:'high', nd:v=>v.toFixed(4)},
+  {key:'dvrp_pct',  raw:'dvrp',   title:'下行VRP(bad)',    tag:'≤10 下行capitulation', h:90, color:'#16a085', pctMode:true, dir:'low',  nd:v=>v.toFixed(3)},
+  {key:'skew_pct',  raw:'skew',   title:'SKEW·尾部(model-free)', tag:'全条带BKM·尾部定价', h:92, color:'#ad1457', pctMode:true, dir:'high', nd:v=>v.toFixed(1)},
+];
+const PADL=58, PADR=54, PADT=20, PADB=6, GAP=10, DATEH=20;
+
+/* readout chips (order + labels) */
+const CHIPS = [
+  {key:'price',lab:'价格',c:'#1f4e79',f:v=>fmtPrice(v)},
+  {key:'atm_iv',lab:'ATM IV',c:'#8e44ad',f:v=>pct1(v),p:'iv_pct'},
+  {key:'sent',lab:'情绪比',c:'#c0392b',f:v=>v.toFixed(3),p:'sent_pct'},
+  {key:'rr',lab:'RR',c:'#16847e',f:v=>v.toFixed(4),p:'rr_pct'},
+  {key:'slope',lab:'斜率',c:'#bf7d16',f:v=>v.toFixed(3),p:'slope_pct'},
+  {key:'vrp',lab:'VRP',c:'#2e7d46',f:v=>v.toFixed(3),p:'vrp_pct'},
+  {key:'pcr',lab:'PCR',c:'#5d6d7e',f:v=>v.toFixed(3),p:'pcr_pct'},
+  {key:'vvix',lab:'VVIX',c:'#6c5ce7',f:v=>pct1(v),p:'vvix_pct'},
+  {key:'conv',lab:'凸度',c:'#e67e22',f:v=>v.toFixed(4),p:'conv_pct'},
+  {key:'dvrp',lab:'下行VRP',c:'#16a085',f:v=>v.toFixed(3),p:'dvrp_pct'},
+  {key:'skew',lab:'SKEW',c:'#ad1457',f:v=>v.toFixed(1),p:'skew_pct'},
+];
+
+function fmtPrice(v){ return v>=100 ? v.toFixed(1) : v.toFixed(3); }
+function pct1(v){ return (v*100).toFixed(1)+'%'; }
+function fmtDate(s){ return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8); }
+
+/* ---------------- state ---------------- */
+let CUR=null, LAYOUT=null, DPR=Math.max(1,window.devicePixelRatio||1);
+let hoverI=-1, showBand=false, subMode='pct';   // subMode: pct=分位 | raw=原值; 触发带默认关(抄底信号先不显示)
+let curKey=null, RANGE='recent';
+let PA=PANELS;   // 当前有数据的副图(自动跳过整列为空的因子, 如缺 SKEW 的旧数据)
+function activePanels(){
+  return PANELS.filter(p=>{
+    const a=CUR[p.key]; if(Array.isArray(a)&&a.some(v=>v!=null))return true;
+    const r=p.raw&&CUR[p.raw]; return Array.isArray(r)&&r.some(v=>v!=null);
+  });
+}
+const RECENT_N=252;       // "近1年" = 最近 252 个交易日(日线)
+const SLICE_KEYS=['dates','price','dd20','mom20','mom_pct','atm_iv','iv_pct','sent','sent_pct','rr','rr_pct',
+  'slope','slope_pct','vrp','vrp_pct','rv','pcr','pcr_pct','gex_z',
+  'vvix','vvix_pct','conv','conv_pct','dvrp','dvrp_pct','skew','skew_pct'];
+
+function sliceByStart(src){
+  // 百分位为滚动窗口, 已含起点前历史, 尾部截断后仍有效
+  if(RANGE==='all') return {...src};
+  const s=Math.max(0, src.dates.length-RECENT_N);
+  const out={name:src.name};
+  for(const k of SLICE_KEYS) if(Array.isArray(src[k])) out[k]=src[k].slice(s);
+  return out;
+}
+const base=document.getElementById('base'), overlay=document.getElementById('overlay');
+const chart=document.getElementById('chart'), tip=document.getElementById('tip');
+const bctx=base.getContext('2d'), octx=overlay.getContext('2d');
+
+/* build tabs */
+const tabs=document.getElementById('tabs');
+Object.keys(DATA).forEach((k,i)=>{
+  const b=document.createElement('button');
+  b.className='tab'+(i===0?' on':''); b.textContent=DATA[k].name; b.dataset.k=k;
+  b.onclick=()=>{ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+    b.classList.add('on'); select(k); onLeave(); };
+  tabs.appendChild(b);
+});
+
+document.getElementById('tgBand').onchange=e=>{ showBand=e.target.checked; render(); };
+
+document.getElementById('subSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  subMode=b.dataset.m;
+  document.querySelectorAll('#subSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  resize();                       // 重算各副图纵轴范围(分位固定 / 原值自适应)
+  if(hoverI>=0) drawCross(hoverI);
+});
+
+function totalH(){ return PA.reduce((a,p)=>a+p.h,0) + GAP*(PA.length-1) + PADT + PADB + DATEH; }
+
+/* 五信号"恐慌灯"(63日滚动分位, 阈值0.90/0.10)。
+   高IV≥.90 · 情绪比≥.90 · RR≤.10 · 斜率≤.10 · VRP≤.10。
+   抄底触发 = 灯数 + 动态跌幅(20日动量分位) 双条件, 三档:
+     黄·关注  ≥1灯 且 动量分位≤.15   (跌得比过去~85%时候狠)
+     橙·加注  ≥2灯 且 动量分位≤.08
+     红·重仓  ≥3灯 且 动量分位≤.04
+   顶部 melt-up 过热区(仅警示·非做空): 动量分位≥.85 且 IV分位≥.75 且 VRP分位≥.75。
+   返回 {lights, tier:[0~3抄底档], hot:[0/1过热]}。 */
+const HI=0.90, LO=0.10;
+function litCount(d,i){
+  let k=0;
+  const ivp=d.iv_pct[i], sp=d.sent_pct[i], rp=d.rr_pct[i], slp=d.slope_pct[i], vp=d.vrp_pct[i];
+  if(ivp!=null&&ivp>=HI) k++;   // 高IV: 恐慌买保护
+  if(sp !=null&&sp >=HI) k++;   // 情绪比: 抢认沽
+  if(rp !=null&&rp <=LO) k++;   // RR: 下跌偏斜极端
+  if(slp!=null&&slp<=LO) k++;   // 斜率: 尾部恐惧
+  if(vp !=null&&vp <=LO) k++;   // VRP: 已实现反超隐波 capitulation
+  return k;
+}
+function computeBand(d){
+  const n=d.dates.length, lights=new Array(n).fill(0), tier=new Array(n).fill(0), hot=new Array(n).fill(0);
+  for(let i=0;i<n;i++){
+    const k=litCount(d,i); lights[i]=k;
+    const mp=d.mom_pct[i], ivp=d.iv_pct[i], vp=d.vrp_pct[i];
+    let t=0;
+    if(mp!=null){                       // 抄底: 动态跌幅 + 灯
+      if(k>=3 && mp<=0.04) t=3;
+      else if(k>=2 && mp<=0.08) t=2;
+      else if(k>=1 && mp<=0.15) t=1;
+    }
+    tier[i]=t;
+    // 顶部 melt-up 过热(高位+IV高+VRP高) — 只警示不做空
+    if(mp!=null&&ivp!=null&&vp!=null&&mp>=0.85&&ivp>=0.75&&vp>=0.75) hot[i]=1;
+  }
+  return {lights, tier, hot};
+}
+const TIER_COL={1:[191,125,22], 2:[211,84,0], 3:[192,57,43]};   // 黄 / 橙 / 红
+const TIER_NAME={1:'黄·关注', 2:'橙·加注', 3:'红·重仓'};
+const HOT_COL=[124,58,173];   // melt-up 过热 = 紫
+/* 建议仓位: 无底仓 + 双引擎入场 + 趋势持有(trailing stop)。
+   目标仓位 = max(恐慌抄底, 趋势跟随):
+     抄底 dip   = ramp(panic(五灯恐慌度) × gate(动量分位跌幅门) × GEX调节)  — 跌+恐慌才进
+     趋势 trend = ramp(20日动量分位, 0.55起→0.90满)                        — 涨势中持仓(修牛市踏空)
+   持有: 未跌破持仓峰值×(1-TS) 就保持(不线性减) — 骑趋势; 跌破则减。
+   melt-up 过热只作警示带、不再压制仓位(逃顶信号已证伪, 强趋势里压制是元凶)。 */
+const WTH=0.15, WFULL=0.45, WTS=0.05, TRLO=0.55, TRHI=0.90;
+const GEXK=0.4, GEXLO=0.4, GEXHI=1.5;                 // GEX 仓位调节: 低GEX放大/高GEX压制
+function clamp(x,a,b){ return Math.max(a,Math.min(b,x)); }
+function computeWeight(d, hot){
+  const n=d.dates.length, w=new Array(n).fill(0), buyA=new Array(n).fill(0);
+  let prev=0, pk=null;
+  for(let i=0;i<n;i++){
+    const mp=d.mom_pct[i], px=d.price[i];
+    const parts=[];
+    for(const [v,h] of [[d.iv_pct[i],1],[d.sent_pct[i],1],[d.rr_pct[i],0],[d.slope_pct[i],0],[d.vrp_pct[i],0]]){
+      if(v==null) continue; parts.push(h?v:1-v);
+    }
+    if(!parts.length||mp==null){ w[i]=prev; continue; }
+    const panic=parts.reduce((a,b)=>a+b,0)/parts.length;
+    const gate=clamp((0.30-mp)/0.30,0,1);
+    let buy=panic*gate;
+    const gz = d.gex_z ? d.gex_z[i] : null;
+    if(gz!=null) buy *= clamp(1-GEXK*gz, GEXLO, GEXHI);
+    buyA[i]=buy;
+    const dip=clamp((buy-WTH)/(WFULL-WTH),0,1);         // 抄底目标
+    const trend=clamp((mp-TRLO)/(TRHI-TRLO),0,1);       // 趋势目标
+    const t=Math.max(dip, trend);                       // 双引擎取大(floor=0)
+    let wi;
+    if(prev>1e-6 && px!=null){                          // 持仓中 → 骑趋势
+      pk = pk==null ? px : Math.max(pk, px);
+      if(px < pk*(1-WTS)){ wi=Math.max(0,t); pk=null; } // 跌破峰值-5% → 趋势破, 回落
+      else { wi=Math.max(prev, t); }                    // 未破: 保持/加仓, 不线性减
+    } else {
+      wi=t; pk=(wi>1e-6 && px!=null) ? px : null;
+    }
+    w[i]=clamp(wi,0,1); prev=w[i];
+  }
+  return {w, buy:buyA};
+}
+/* 该信号在当日是否点亮(用于tooltip逐项标注) */
+function litFlags(i){
+  return {
+    '高IV': CUR.iv_pct[i]!=null&&CUR.iv_pct[i]>=HI,
+    '情绪比': CUR.sent_pct[i]!=null&&CUR.sent_pct[i]>=HI,
+    'RR': CUR.rr_pct[i]!=null&&CUR.rr_pct[i]<=LO,
+    '斜率': CUR.slope_pct[i]!=null&&CUR.slope_pct[i]<=LO,
+    'VRP': CUR.vrp_pct[i]!=null&&CUR.vrp_pct[i]<=LO,
+  };
+}
+
+function select(k){
+  curKey=k;
+  CUR=sliceByStart(DATA[k]);
+  const bb=computeBand(CUR); CUR.lights=bb.lights; CUR.tier=bb.tier; CUR.hot=bb.hot;
+  const ww=computeWeight(CUR, bb.hot); CUR.weight=ww.w; CUR.buy=ww.buy;
+  PA=activePanels();
+  document.getElementById('curname').textContent=CUR.name;
+  buildReadout();
+  resize();
+}
+
+document.getElementById('rangeSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  RANGE=b.dataset.r;
+  document.querySelectorAll('#rangeSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  select(curKey); onLeave();
+});
+
+function buildReadout(){
+  const ro=document.getElementById('readout'); ro.innerHTML='';
+  CHIPS.filter(c=>{const a=CUR[c.key];return Array.isArray(a)&&a.some(v=>v!=null);}).forEach(c=>{
+    const el=document.createElement('div'); el.className='chip'+(c.big?' big':''); el.id='chip_'+c.key;
+    el.innerHTML=`<span class="dot" style="background:${c.c}"></span>`+
+      `<span class="lab">${c.lab}</span><span class="val">—</span>`;
+    ro.appendChild(el);
+  });
+}
+
+/* ---------------- layout & scales ---------------- */
+function resize(){
+  const W=chart.clientWidth, H=totalH();
+  [base,overlay].forEach(cv=>{ cv.width=W*DPR; cv.height=H*DPR;
+    cv.style.width=W+'px'; cv.style.height=H+'px'; });
+  chart.style.height=H+'px';
+  bctx.setTransform(DPR,0,0,DPR,0,0); octx.setTransform(DPR,0,0,DPR,0,0);
+  computeLayout(W,H); render();
+}
+
+function niceExtent(arr){
+  let lo=Infinity,hi=-Infinity;
+  for(const v of arr){ if(v==null)continue; if(v<lo)lo=v; if(v>hi)hi=v; }
+  if(lo===Infinity){ lo=0; hi=1; }
+  if(lo===hi){ lo-=Math.abs(lo)*0.1||1; hi+=Math.abs(hi)*0.1||1; }
+  const pad=(hi-lo)*0.10; return [lo-pad, hi+pad];
+}
+
+function computeLayout(W,H){
+  const plotW=W-PADL-PADR;
+  const n=CUR.dates.length;
+  let y=PADT; const panels=[];
+  for(const p of PA){
+    const rawView = p.pctMode && subMode==='raw' && p.raw;
+    const ext = rawView ? niceExtent(CUR[p.raw])
+              : (p.pctMode||p.weightMode) ? [-0.04, 1.08] : niceExtent(CUR[p.key]);
+    panels.push({...p, top:y, plotH:p.h, ext});
+    y+=p.h+GAP;
+  }
+  const xAxisY=y-GAP+2;
+  LAYOUT={W,H,plotW,n,panels,xAxisY,
+    x:i=> PADL + (n<=1?0:i/(n-1))*plotW};
+}
+
+function yOf(p,v){ const [lo,hi]=p.ext; return p.top + (1-(v-lo)/(hi-lo))*p.plotH; }
+
+/* ---------------- render base ---------------- */
+function render(){
+  if(!LAYOUT) return;
+  const {W,H,plotW,n,panels}=LAYOUT;
+  bctx.clearRect(0,0,W,H);
+
+  // 触发带竖向贯穿: 抄底三档(黄/橙/红) + 顶部 melt-up 过热(紫)
+  if(showBand){
+    const tier=CUR.tier, hot=CUR.hot, top=PADT, bot=panels[panels.length-1].top+panels[panels.length-1].plotH;
+    for(let i=0;i<n;i++){
+      const t=tier[i], h=hot[i];
+      if(!t&&!h)continue;
+      const x0=LAYOUT.x(i-0.5), x1=LAYOUT.x(i+0.5);
+      if(t){ const [r,g,b]=TIER_COL[t]; bctx.fillStyle=`rgba(${r},${g},${b},${0.10+t*0.05})`; }
+      else { const [r,g,b]=HOT_COL; bctx.fillStyle=`rgba(${r},${g},${b},.13)`; }
+      bctx.fillRect(x0,top,x1-x0,bot-top);
+    }
+  }
+
+  // year gridlines (vertical) at Jan of each year
+  drawYearGrid();
+
+  // each panel
+  for(const p of panels){
+    // panel frame baseline
+    bctx.strokeStyle='#efece5'; bctx.lineWidth=1;
+    bctx.strokeRect(PADL, p.top, plotW, p.plotH);
+    // title (+ 极值方向小字), 白色衬底避免被阈值点线横穿
+    bctx.font='600 12px -apple-system,PingFang SC,sans-serif';
+    const ttlW=bctx.measureText(p.title).width;
+    let tagW=0; if(p.tag){ bctx.font='10.5px -apple-system,PingFang SC,sans-serif'; tagW=bctx.measureText('· '+p.tag).width+6; }
+    bctx.fillStyle='rgba(255,255,255,.82)';
+    bctx.fillRect(PADL+4, p.top+3, ttlW+tagW+8, 15);
+    bctx.fillStyle='#54524c'; bctx.font='600 12px -apple-system,PingFang SC,sans-serif';
+    bctx.textAlign='left'; bctx.textBaseline='top';
+    bctx.fillText(p.title, PADL+7, p.top+5);
+    if(p.tag){
+      bctx.fillStyle='#b0ab9f'; bctx.font='10.5px -apple-system,PingFang SC,sans-serif';
+      bctx.fillText('· '+p.tag, PADL+7+ttlW+6, p.top+6);
+    }
+    // y ticks + reference lines
+    drawYTicks(p);
+    if(p.pctMode && subMode==='pct') drawPctRefs(p);
+    else if(p.weightMode) drawWeightRefs(p);
+    else if(p.refs) for(const r of p.refs){ drawRef(p,r); }
+    // series line
+    drawSeries(p);
+  }
+  drawDateAxis();
+}
+
+function drawYearGrid(){
+  const {panels,n}=LAYOUT; const top=PADT;
+  const bot=panels[panels.length-1].top+panels[panels.length-1].plotH;
+  let prevYr=null;
+  bctx.strokeStyle='#eeebe3'; bctx.lineWidth=1; bctx.setLineDash([]);
+  bctx.fillStyle='#b7b3a8'; bctx.font='11px -apple-system,sans-serif';
+  bctx.textAlign='center'; bctx.textBaseline='top';
+  for(let i=0;i<n;i++){
+    const yr=CUR.dates[i].slice(0,4);
+    if(yr!==prevYr){
+      if(prevYr!==null){
+        const x=LAYOUT.x(i);
+        bctx.beginPath(); bctx.moveTo(x,top); bctx.lineTo(x,bot); bctx.stroke();
+      }
+      prevYr=yr;
+    }
+  }
+}
+
+function drawYTicks(p){
+  const rawView = p.pctMode && subMode==='raw' && p.raw;
+  const pctY = (p.pctMode||p.weightMode) && !rawView;
+  const vals = pctY ? [1,0.5,0] : [p.ext[1],(p.ext[0]+p.ext[1])/2,p.ext[0]];
+  bctx.textAlign='right'; bctx.textBaseline='middle';
+  bctx.font='10.5px "SF Mono",Menlo,monospace'; bctx.fillStyle='#a7a399';
+  for(const v of vals){
+    const y=yOf(p,v);
+    const lab = pctY ? (v*100)+'%' : (p.nd?p.nd(v):v.toFixed(2));
+    bctx.fillText(lab, PADL-6, y);
+    bctx.strokeStyle='#f2efe8'; bctx.lineWidth=1; bctx.setLineDash([]);
+    bctx.beginPath(); bctx.moveTo(PADL,y); bctx.lineTo(PADL+LAYOUT.plotW,y); bctx.stroke();
+  }
+}
+
+/* 副图百分位: 画 0.90 / 0.10 阈值点线, 触发方向那条加粗染色 */
+function drawPctRefs(p){
+  const lines=[{y:0.9,lab:'0.90',hot:p.dir==='high'},{y:0.1,lab:'0.10',hot:p.dir==='low'}];
+  for(const L of lines){
+    const y=yOf(p,L.y);
+    bctx.setLineDash([3,3]);
+    bctx.strokeStyle = L.hot ? 'rgba(192,57,43,.55)' : '#cdc8bc';
+    bctx.lineWidth = L.hot ? 1.4 : 1;
+    bctx.beginPath(); bctx.moveTo(PADL,y); bctx.lineTo(PADL+LAYOUT.plotW,y); bctx.stroke();
+    bctx.setLineDash([]);
+    bctx.fillStyle = L.hot ? 'var(--red)' : '#b0ab9f'; bctx.fillStyle = L.hot?'#c0392b':'#b0ab9f';
+    bctx.font='10px "SF Mono",monospace'; bctx.textAlign='left'; bctx.textBaseline='middle';
+    bctx.fillText(L.lab, PADL+LAYOUT.plotW+4, y);
+  }
+}
+
+/* 建议仓位: 半仓/满仓参考线(无底仓) */
+function drawWeightRefs(p){
+  for(const L of [{y:0.5,lab:'半仓'},{y:1,lab:'满仓'}]){
+    const y=yOf(p,L.y);
+    bctx.setLineDash([3,3]); bctx.strokeStyle='#c9c4b8'; bctx.lineWidth=1;
+    bctx.beginPath(); bctx.moveTo(PADL,y); bctx.lineTo(PADL+LAYOUT.plotW,y); bctx.stroke();
+    bctx.setLineDash([]);
+    bctx.fillStyle='#b0ab9f'; bctx.font='10px "SF Mono",monospace';
+    bctx.textAlign='left'; bctx.textBaseline='middle';
+    bctx.fillText(L.lab, PADL+LAYOUT.plotW+4, y);
+  }
+}
+
+function drawRef(p,r){
+  if(r.y<p.ext[0]||r.y>p.ext[1])return;
+  const y=yOf(p,r.y);
+  bctx.strokeStyle='#c9c4b8'; bctx.lineWidth=1; bctx.setLineDash([3,3]);
+  bctx.beginPath(); bctx.moveTo(PADL,y); bctx.lineTo(PADL+LAYOUT.plotW,y); bctx.stroke();
+  bctx.setLineDash([]);
+  bctx.fillStyle='#b0ab9f'; bctx.font='10px "SF Mono",monospace';
+  bctx.textAlign='left'; bctx.textBaseline='bottom';
+  bctx.fillText(r.lab, PADL+LAYOUT.plotW+4, y+3);
+}
+
+function drawSeries(p){
+  const rawView = p.pctMode && subMode==='raw' && p.raw;
+  const arr=CUR[rawView?p.raw:p.key], n=LAYOUT.n;
+  // 面积填充: 主图(蓝) 或 建议仓位(绿, 填到 y=0 处)
+  if(p.fill || p.weightMode){
+    const base = p.weightMode ? yOf(p,0) : p.top+p.plotH;
+    const g=bctx.createLinearGradient(0,p.top,0,base);
+    if(p.weightMode){ g.addColorStop(0,'rgba(31,111,92,.28)'); g.addColorStop(1,'rgba(31,111,92,.03)'); }
+    else { g.addColorStop(0,'rgba(31,78,121,.16)'); g.addColorStop(1,'rgba(31,78,121,0)'); }
+    bctx.beginPath(); let started=false, lastX=PADL;
+    for(let i=0;i<n;i++){ const v=arr[i]; if(v==null)continue;
+      const x=LAYOUT.x(i), y=yOf(p,v);
+      if(!started){ bctx.moveTo(x,base); bctx.lineTo(x,y); started=true; }
+      else bctx.lineTo(x,y);
+      lastX=x;
+    }
+    bctx.lineTo(lastX, base); bctx.closePath();
+    bctx.fillStyle=g; bctx.fill();
+  }
+  bctx.beginPath(); let started=false;
+  for(let i=0;i<n;i++){ const v=arr[i]; if(v==null){ started=false; continue; }
+    const x=LAYOUT.x(i), y=yOf(p,v);
+    if(!started){ bctx.moveTo(x,y); started=true; } else bctx.lineTo(x,y);
+  }
+  bctx.strokeStyle=p.color; bctx.lineWidth=p.main?1.6:(p.weightMode?1.6:1.3);
+  bctx.lineJoin='round'; bctx.stroke();
+
+  // 副图: 标出穿越极值阈值(该指标触发方向)的点 — 仅分位视图
+  if(p.pctMode && p.dir && subMode==='pct'){
+    bctx.fillStyle='#c0392b';
+    for(let i=0;i<n;i++){ const v=arr[i]; if(v==null)continue;
+      const hit = p.dir==='high' ? v>=HI : v<=LO;
+      if(!hit)continue;
+      bctx.beginPath(); bctx.arc(LAYOUT.x(i), yOf(p,v), 1.9, 0, 7); bctx.fill();
+    }
+  }
+}
+
+function drawDateAxis(){
+  const {n,xAxisY,plotW}=LAYOUT;
+  bctx.fillStyle='#8f8b80'; bctx.font='10.5px "SF Mono",monospace';
+  bctx.textBaseline='top';
+  // adaptive tick count: ~56px per "YY-MM-DD" label
+  const ticks=Math.max(2, Math.min(9, Math.floor(plotW/64)));
+  for(let t=0;t<=ticks;t++){
+    const i=Math.round(t/ticks*(n-1));
+    const x=LAYOUT.x(i);
+    bctx.textAlign = t===0?'left' : (t===ticks?'right':'center');
+    bctx.fillText(fmtDate(CUR.dates[i]).slice(2), x, xAxisY+2);
+  }
+}
+
+/* ---------------- crosshair overlay ---------------- */
+function drawCross(i){
+  const {W,H,panels}=LAYOUT;
+  octx.clearRect(0,0,W,H);
+  if(i<0) return;
+  const x=LAYOUT.x(i);
+  const top=PADT, bot=panels[panels.length-1].top+panels[panels.length-1].plotH;
+  // vertical line
+  octx.strokeStyle='rgba(26,25,22,.42)'; octx.lineWidth=1; octx.setLineDash([4,3]);
+  octx.beginPath(); octx.moveTo(x,top); octx.lineTo(x,bot); octx.stroke();
+  octx.setLineDash([]);
+  // per-panel marker dot + value pill
+  for(const p of panels){
+    const rawView = p.pctMode && subMode==='raw' && p.raw;
+    const v=CUR[rawView?p.raw:p.key][i]; if(v==null)continue;
+    const y=yOf(p,v);
+    octx.beginPath(); octx.arc(x,y,3.2,0,7); octx.fillStyle=p.color;
+    octx.fill(); octx.strokeStyle='#fff'; octx.lineWidth=1.4; octx.stroke();
+    // value label on right axis
+    const txt = ((p.pctMode||p.weightMode) && !rawView) ? (v*100).toFixed(0)+'%' : p.nd(v);
+    octx.font='600 10.5px "SF Mono",monospace';
+    const tw=octx.measureText(txt).width;
+    const lx=PADL+LAYOUT.plotW+2;
+    octx.fillStyle=p.color;
+    octx.fillRect(lx, y-7, tw+8, 14);
+    octx.fillStyle='#fff'; octx.textAlign='left'; octx.textBaseline='middle';
+    octx.fillText(txt, lx+4, y);
+  }
+  // date pill at bottom
+  const dtxt=fmtDate(CUR.dates[i]);
+  octx.font='600 11px "SF Mono",monospace';
+  const dw=octx.measureText(dtxt).width;
+  octx.fillStyle='#1a1916';
+  octx.fillRect(x-dw/2-6, LAYOUT.xAxisY, dw+12, 17);
+  octx.fillStyle='#fff'; octx.textAlign='center'; octx.textBaseline='middle';
+  octx.fillText(dtxt, x, LAYOUT.xAxisY+9);
+}
+
+/* 今日期权动作提示: 把研究结论落地为可执行动作 */
+function actionAt(i){
+  const pp=v=>v==null?'—':(v*100).toFixed(0);
+  const iv=CUR.iv_pct[i], mp=CUR.mom_pct[i], k=CUR.lights?.[i]||0, hot=CUR.hot?.[i]||0, tier=CUR.tier?.[i]||0;
+  const vv=CUR.vvix_pct?CUR.vvix_pct[i]:null;
+  if(tier>=1) return {cls:'act-hold', ico:'🔎', tag:'波动率结构极值区 · 仅观察',
+    why:`恐慌灯 ${k} 盏 · 动量分位 ${pp(mp)} → 波动率结构处于历史极值。<b>暂不给抄底动作提示</b>——事件研究虽见弱领先性、但未找到稳健可用的抄底信号(权益曲线跑不赢买入持有), 此处仅作极值观察。`,
+    odds:''};
+  if(hot) return {cls:'act-trim', ico:'🟣', tag:'过热 · 风险已高(非反转信号)',
+    why:`高位 + IV≥75 + VRP≥75 的过热态。<b>美股回测: 逃顶不成立</b> —— 高动量后续 20 日仍多为<b>继续上涨</b>(SPY +2.9% / SOXX +10.6%, 胜率 82-84%)。这不是反转或做空信号，仅提示风险已高、可自行收紧止盈。`,
+    odds:'仅过热/风险提示 · 非反转 · 非做空 · 非交易建议'};
+  if(iv!=null&&iv<=0.25) return {cls:'act-insure', ico:'🔵', tag:'低波平静 · 保护便宜',
+    why:`IV 分位 ${pp(iv)}(平静、期权便宜)。若有对冲需求，低波时布局近月 ATM put 的赔率最好——"天晴时买伞"，而非等恐慌时。`,
+    odds:'结构逻辑 · 研究提示, 非交易建议'};
+  return {cls:'act-hold', ico:'⚪', tag:'常态 · 无极值信号',
+    why:`无恐慌抄底 / 过热 / 低波保护信号(动量分位 ${pp(mp)} · IV 分位 ${pp(iv)})。观察指标即可，无额外动作。`, odds:''};
+}
+function updateAction(i){
+  const el=document.getElementById('action');
+  if(i<0){ el.className='action act-hold'; el.innerHTML=''; return; }
+  const a=actionAt(i);
+  el.className='action '+a.cls;
+  el.innerHTML=`<span class="ico">${a.ico}</span><div class="body"><div class="tag">${a.tag}</div>`+
+    `<div class="why">${a.why}</div>${a.odds?`<div class="odds">${a.odds}</div>`:''}</div>`;
+}
+
+function updateReadout(i){
+  document.getElementById('curdate').textContent = i>=0?fmtDate(CUR.dates[i]):'—';
+  updateAction(i);
+  CHIPS.forEach(c=>{
+    const el=document.getElementById('chip_'+c.key); if(!el)return;
+    const v=i>=0?CUR[c.key][i]:null;
+    const p=c.p&&i>=0?CUR[c.p][i]:null;
+    const vs = v==null?'—':c.f(v);
+    const ps = p==null?'':` <span class="pc" style="color:var(--muted)">${(p*100).toFixed(0)}%</span>`;
+    el.querySelector('.val').innerHTML = vs;
+    // percentile text appended
+    let ex=el.querySelector('.pcx'); if(!ex){ ex=document.createElement('span'); ex.className='pc pcx'; el.appendChild(ex);}
+    ex.textContent = p==null?'':`${(p*100).toFixed(0)}%`;
+  });
+}
+
+function showTip(i, mx){
+  if(i<0){ tip.style.display='none'; return; }
+  let html=`<div class="td">${fmtDate(CUR.dates[i])}</div>`;
+  for(const c of CHIPS){
+    const v=CUR[c.key][i]; if(v==null)continue;
+    const p=c.p?CUR[c.p][i]:null;
+    const pc = p==null?'':`<span class="pc">${(p*100).toFixed(0)}%</span>`;
+    html+=`<div class="row"><span class="k"><span style="display:inline-block;width:7px;height:7px;border-radius:2px;background:${c.c};margin-right:5px"></span>${c.lab}</span>`+
+      `<span class="v" style="color:${c.c}">${c.f(v)}${pc}</span></div>`;
+  }
+  const k=CUR.lights[i], t=CUR.tier[i], hot=CUR.hot[i], mom=CUR.mom20[i], mp=CUR.mom_pct[i], dd=CUR.dd20[i];
+  const lf=litFlags(i); const on=Object.keys(lf).filter(x=>lf[x]);
+  html+=`<div class="row" style="margin-top:4px;border-top:1px solid var(--line2);padding-top:5px">`+
+    `<span class="k">恐慌灯</span><span class="v" style="color:${k?'var(--red)':'var(--muted)'}">${k} 盏${on.length?` <span class="pc" style="color:var(--red)">${on.join('·')}</span>`:''}</span></div>`;
+  html+=`<div class="row"><span class="k">20日动量</span><span class="v" style="color:var(--ink2)">${mom==null?'—':(mom*100).toFixed(1)+'%'}${mp==null?'':` <span class="pc">${(mp*100).toFixed(0)}%</span>`}</span></div>`;
+  const tc={1:'#bf7d16',2:'#d35400',3:'#c0392b'};
+  html+=`<div class="row"><span class="k">触发档位</span><span class="v" style="color:${t?tc[t]:'var(--muted)'}">${t?TIER_NAME[t]+' · 抄底':'未触发'}</span></div>`;
+  if(hot) html+=`<div class="row"><span class="k" style="color:#7c3aad">顶部状态</span><span class="v" style="color:#7c3aad">melt-up 过热 · 降仓警示</span></div>`;
+  tip.innerHTML=html; tip.style.display='block';
+  const tw=tip.offsetWidth, cw=chart.clientWidth;
+  let left=mx+16; if(left+tw>cw) left=mx-tw-16; if(left<0)left=6;
+  tip.style.left=left+'px'; tip.style.top='14px';
+}
+
+function nearestIndex(mx){
+  const {n,plotW}=LAYOUT;
+  const r=(mx-PADL)/plotW; let i=Math.round(r*(n-1));
+  return Math.max(0,Math.min(n-1,i));
+}
+
+function onMove(e){
+  const rect=chart.getBoundingClientRect();
+  const mx=(e.touches?e.touches[0].clientX:e.clientX)-rect.left;
+  if(mx<PADL-4||mx>PADL+LAYOUT.plotW+4){ /* still snap */ }
+  const i=nearestIndex(mx);
+  if(i!==hoverI){ hoverI=i; drawCross(i); updateReadout(i); }
+  showTip(i,mx);
+}
+function onLeave(){ hoverI=-1; drawCross(-1); updateReadout(-1); tip.style.display='none';
+  updateReadout(CUR.dates.length-1); }
+
+chart.addEventListener('mousemove',onMove);
+chart.addEventListener('mouseleave',onLeave);
+chart.addEventListener('touchstart',e=>{onMove(e);},{passive:true});
+chart.addEventListener('touchmove',e=>{onMove(e);e.preventDefault();},{passive:false});
+window.addEventListener('resize',()=>{ resize(); if(hoverI>=0)drawCross(hoverI); });
+
+/* init */
+select(Object.keys(DATA)[0]);
+onLeave(); // set readout to latest day
+</script>
+</body>
+</html>
