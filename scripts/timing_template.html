@@ -130,6 +130,7 @@
       <span class="band-note"><i style="background:rgba(192,57,43,.30);border:1px solid var(--red)"></i>红·重仓 <b>≥3灯 且 ≤.04</b></span>
       <span class="band-note"><i style="background:rgba(124,58,173,.20);border:1px solid #7c3aad"></i>紫·melt-up过热 <b>降仓警示·非做空</b></span>
     </div>
+    <b>vol-of-vol(VVIX 思路)</b>：A股无 VIX 期权、算不出真 VVIX，故用两个代理——<b>蝶式凸度</b>=(IV<sub>25Δc</sub>+IV<sub>25Δp</sub>)/2−ATM IV(市场为大波动/尾部付的溢价)与<b>已实现 vol-of-vol</b>=RV20 对数变化的 20 日波动(只用价格、最正交)。实测(IV≥0.75分位的跌到位日 n=257)：<b>IV 高且凸度高</b>=真恐慌，胜率 65.6%/均值 +3.7%；<b>IV 高但凸度低</b>=假恐慌，胜率仅 49.2%/均值 +1.7%。这解释了为何"高IV"单独几乎无预测力(IC +0.03)——里面混了一半假恐慌。两者<b>单独用无效</b>(IC 仅 0.05~0.09)，只作抄底的质量过滤。样本偏 924 后、n 有限，谨慎看待。<br>
     <b>GEX 强化(K=0.4)</b>：dealer gamma 敞口作仓位调节——低 GEX(空 gamma·波动放大·剧烈 capitulation)抄底加成、高 GEX(温吞恐慌)压制。与现有因子几乎正交(|r|&lt;0.3)，是独立增量：接入后中小盘夏普 +0.1~0.17、回撤不增(沪深300 无感)。GEX 只作 regime 择时，A股无 pin/价格点位效应。<br>
     <b>抄底触发＝灯数＋动态跌幅双条件</b>。跌幅闸门已从 hardcode −5/−8/−10% 换成<b>20日动量的1年滚动分位</b>（≤.15/.08/.04＝"跌得比过去约85%/92%/96%的时候都狠"），自适应波动环境、不同标的可比，且修掉了沪深300全样本的不稳。只有灯亮不够、需同时跌到位才着色，"正常态"大部分时间不触发。<br>
     <b>紫色 melt-up 过热区</b>（高位＋IV分位≥.75＋VRP分位≥.75）：实证显示这不是逃顶做空信号（其后20日科创/创业板平均仍 +9~11%），仅作<b>过热降仓/收紧止盈</b>提示——波动率是情绪强度、方向仍看价格动量。<br>
@@ -154,6 +155,9 @@ const PANELS = [
   {key:'slope_pct', raw:'slope',  title:'微笑斜率 · 分位', tag:'≤10 尾部恐惧',      h:94, color:'#bf7d16', pctMode:true, dir:'low'},
   {key:'vrp_pct',   raw:'vrp',    title:'VRP · 分位',      tag:'≤10 capitulation', h:94, color:'#2e7d46', pctMode:true, dir:'low'},
   {key:'pcr_pct',   raw:'pcr',    title:'PCR · 分位',      tag:'辅助·不计灯',       h:90, color:'#5d6d7e', pctMode:true, dir:null},
+  // vol-of-vol 代理(VVIX思路): 高IV 若无 vol-of-vol 配合 = 假恐慌(实测胜率 49% vs 66%)
+  {key:'bf_pct',    raw:'bf',     title:'蝶式凸度 · 分位',  tag:'高=为大波动付溢价',  h:92, color:'#0e7c7b', pctMode:true, dir:null},
+  {key:'rvvol_pct', raw:'rvvol',  title:'已实现vol-of-vol · 分位', tag:'波动率自身的波动', h:92, color:'#a0522d', pctMode:true, dir:null},
   // GEX 标准分(dealer gamma敞口): 负=空gamma·波动放大·利抄底 → 放大仓位
   {key:'gex_z', title:'GEX · 标准分', tag:'负=波动放大·抄底加成', h:92, color:'#b5651d', nd:v=>v.toFixed(2), refs:[{y:0,lab:'0'}], lastB:true},
 ];
@@ -169,6 +173,8 @@ const CHIPS = [
   {key:'vrp',lab:'VRP',c:'#2e7d46',f:v=>v.toFixed(3),p:'vrp_pct'},
   {key:'pcr',lab:'PCR',c:'#5d6d7e',f:v=>v.toFixed(3),p:'pcr_pct'},
   {key:'gex_z',lab:'GEX',c:'#b5651d',f:v=>v.toFixed(2)},
+  {key:'bf',lab:'蝶式',c:'#0e7c7b',f:v=>v.toFixed(4),p:'bf_pct'},
+  {key:'rvvol',lab:'实现vov',c:'#a0522d',f:v=>v.toFixed(3),p:'rvvol_pct'},
 ];
 
 function fmtPrice(v){ return v>=100 ? v.toFixed(1) : v.toFixed(3); }
@@ -181,7 +187,8 @@ let hoverI=-1, showBand=true;
 let curKey=null, RANGE='924';
 const START='20240924';   // 924 行情起点
 const SLICE_KEYS=['dates','price','dd20','mom20','mom_pct','atm_iv','iv_pct','sent','sent_pct','rr','rr_pct',
-  'slope','slope_pct','vrp','vrp_pct','rv','pcr','pcr_pct','gex_z'];
+  'slope','slope_pct','vrp','vrp_pct','rv','pcr','pcr_pct','gex_z',
+  'bf','bf_pct','rvvol','rvvol_pct'];
 
 function sliceByStart(src){
   // 百分位为滚动1年窗口, 已含起点前的历史, 截断后仍有效
@@ -579,9 +586,20 @@ function drawCross(i){
 function actionAt(i){
   const pp=v=>v==null?'—':(v*100).toFixed(0);
   const iv=CUR.iv_pct[i], mp=CUR.mom_pct[i], k=CUR.lights?.[i]||0, hot=CUR.hot?.[i]||0, tier=CUR.tier?.[i]||0;
-  if(tier>=1) return {cls:'act-buy', ico:'🟢', tag:'抄底 / 买 call 加仓',
-    why:`恐慌灯 ${k} 盏 + 已跌到位(动量分位 ${pp(mp)}) → 极值反转窗口。这是期权买方的主场：IV 即将见顶回落、方向与 vega 都顺。`,
-    odds:'恐慌抄底历史胜率 ~63-77% · 低GEX时更强'};
+  if(tier>=1){
+    // vol-of-vol 背离(VVIX思路): IV高但凸度/vov不高 → 假恐慌, 实测胜率 49% vs 66%
+    const bf=CUR.bf_pct?.[i], rv=CUR.rvvol_pct?.[i];
+    let q='';
+    if(iv!=null&&iv>=0.75&&bf!=null){
+      q = bf>=0.5
+        ? ` · <b>真恐慌确认</b>：蝶式凸度分位 ${pp(bf)}(市场在为大波动付溢价)`
+        : ` · <b>⚠️ 疑似假恐慌</b>：IV 分位 ${pp(iv)} 高但蝶式凸度仅 ${pp(bf)} —— 背离时历史胜率仅 ~49%(vs 齐飙 66%)`;
+      if(rv!=null) q += `,已实现vol-of-vol 分位 ${pp(rv)}`;
+    }
+    return {cls:'act-buy', ico:'🟢', tag:'抄底 / 买 call 加仓',
+      why:`恐慌灯 ${k} 盏 + 已跌到位(动量分位 ${pp(mp)}) → 极值反转窗口。这是期权买方的主场：IV 即将见顶回落、方向与 vega 都顺。${q}`,
+      odds:'恐慌抄底历史胜率 ~63-77% · 低GEX时更强 · vol-of-vol 背离需降级'};
+  }
   if(hot) return {cls:'act-trim', ico:'🟣', tag:'过热 · 减仓 / 收紧止盈',
     why:`melt-up 过热(动量≥85 · IV≥75 · VRP≥75)。<b>别买 put 对冲</b>——高 IV 三杀(方向错+买贵+IV回落),过热买put历史均值 −36~−55%。降敞口最实在。`,
     odds:'对冲科创下行: 做空中证1000(IM) 或 直接减仓'};

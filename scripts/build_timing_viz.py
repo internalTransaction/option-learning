@@ -80,6 +80,11 @@ def build_one(df: pd.DataFrame) -> dict:
     df["rr"] = df["rr_25d"]
     df["slope"] = df["smile_slope"]
     df["pcr"] = df["pcr_vol"]
+    # vol-of-vol 两个代理(A股无VIX期权, 无法算真VVIX):
+    #   bf   蝶式凸度 = (IV_c25+IV_p25)/2 − ATM_IV, 市场为大波动/尾部付的溢价(横截面)
+    #   rvvol 已实现 vol-of-vol = RV20 对数变化的20日波动(只用价格, 最正交)
+    df["bf"] = df["bf_25d"]
+    df["rvvol"] = np.log(df["rv"]).diff().rolling(20, min_periods=10).std() * np.sqrt(252)
 
     d = {
         "dates": [str(x) for x in df["date"].tolist()],
@@ -100,6 +105,10 @@ def build_one(df: pd.DataFrame) -> dict:
         "rv": clean(df["rv"], 4),
         "pcr": clean(df["pcr"], 4),
         "pcr_pct": clean(roll_pct(df["pcr"]), 3),
+        "bf": clean(df["bf"], 4),
+        "bf_pct": clean(roll_pct(df["bf"]), 3),
+        "rvvol": clean(df["rvvol"], 4),
+        "rvvol_pct": clean(roll_pct(df["rvvol"]), 3),
     }
     return d
 
