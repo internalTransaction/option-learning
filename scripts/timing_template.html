@@ -309,6 +309,7 @@ function select(k){
   document.getElementById('curname').textContent=CUR.name;
   buildReadout();
   resize();
+  onLeave();   // 切标的后把日期/读数/动作刷到该标的自己的最新一天(各标的数据日期可能不同)
 }
 
 document.getElementById('rangeSeg').addEventListener('click',e=>{

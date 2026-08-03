@@ -19,3 +19,6 @@ venv/
 
 # tushare token(私密)
 config/tushare_token.txt
+
+# polygon 代理 key(私密)
+config/polygon_key.txt

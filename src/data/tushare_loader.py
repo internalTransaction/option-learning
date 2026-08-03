@@ -95,7 +95,7 @@ def opt_daily_range(key: str, start: str, end: str, use_cache: bool = True,
                     pause: float = 0.15) -> pd.DataFrame:
     """某标的期权在 [start,end] 的全部日线(按交易日循环拉取)。
 
-    返回列: ts_code, trade_date, close, settle, vol, amount, oi。
+    返回列: ts_code, trade_date, open, high, low, close, settle, vol, amount, oi。
     """
     u = UNDERLYINGS[key]
     name = f"ts_optdaily_{key}_{start}_{end}"
@@ -107,14 +107,14 @@ def opt_daily_range(key: str, start: str, end: str, use_cache: bool = True,
     frames = []
     for i, dt in enumerate(dates):
         day = call("opt_daily", {"trade_date": dt, "exchange": u["exchange"]},
-                   "ts_code,trade_date,close,settle,vol,amount,oi")
+                   "ts_code,trade_date,open,high,low,close,settle,vol,amount,oi")
         day = day[day["ts_code"].isin(codes)]
         frames.append(day)
         if (i + 1) % 50 == 0:
             log.info("  opt_daily %s: %d/%d 日", key, i + 1, len(dates))
         time.sleep(pause)
     df = pd.concat(frames, ignore_index=True)
-    for c in ("close", "settle", "vol", "amount", "oi"):
+    for c in ("open", "high", "low", "close", "settle", "vol", "amount", "oi"):
         df[c] = pd.to_numeric(df[c], errors="coerce")
     cache.save(df, name)
     log.info("opt_daily %s: %d 行 (%s~%s)", key, len(df), start, end)
