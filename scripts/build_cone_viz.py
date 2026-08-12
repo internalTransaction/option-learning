@@ -5,7 +5,8 @@
 每天挂一单、H 日内有效、用日内最低价判成交, 统计成交率/成交后收益/还要再跌多少。
 
 输出 data/processed/cone_viz.json:
-  <key>.dates/price/iv/iv_put/panic   历史序列(画锥左侧的走势 + 前端现算锥)
+  <key>.dates/open/high/low/price     历史 OHLC(price=收盘, 画蜡烛与判成交)
+  <key>.iv/iv_put/panic               IV 与恐慌度(前端现算锥)
   <key>.first_W / first_M             周/月首日标记(历史分期带模式用, 其余前端算)
   <key>.anchor / z                    高点锚定模式(保留)
   <key>.bt / bt_panic                 挂单回测(本标的), _pooledBt / _pooledBtPanic 为池化
@@ -70,7 +71,7 @@ def build_one(key: str) -> pd.DataFrame:
     ohlc = pd.read_parquet(abspath("data/raw") / f"ohlc_{key}.parquet")
     ohlc = ohlc.rename(columns={"trade_date": "date"})
     ohlc["date"] = ohlc["date"].astype(str)
-    df = df.merge(ohlc[["date", "high", "low", "close"]], on="date", how="inner")
+    df = df.merge(ohlc[["date", "open", "high", "low", "close"]], on="date", how="inner")
 
     df = df.dropna(subset=["close", "iv"]).sort_values("date").reset_index(drop=True)
     px = df["close"].astype(float)
@@ -155,6 +156,8 @@ def main() -> None:
             "name": df["name"].iloc[0],
             "dates": [str(x) for x in df["date"]],
             "price": clean(df["close"], 4),
+            "open": clean(df["open"], 4),
+            "high": clean(df["high"], 4),
             "low": clean(df["low"], 4),
             "iv": clean(df["iv"], 4),
             "iv_put": clean(df["iv_put"], 4),
