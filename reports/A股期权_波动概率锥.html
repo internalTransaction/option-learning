@@ -575,7 +575,8 @@ function drawSlice(d, i){
     if(real != null){
       const zz = (real / px - 1) / sg;
       h += '<div class="sm" style="margin-top:9px">实际走到 <b style="color:var(--ink)">' +
-           fmtP(real) + '</b>　' + pct(real / px - 1) + '<br>相当于 ' + zz.toFixed(2) + 'σ</div>';
+           fmtP(real) + '</b>　' + pct(real / px - 1) + '<br>相当于 ' + zz.toFixed(2) + 'σ' +
+           (d > 0 ? '<br><span style="color:var(--brand)">点一下把顶点移到这天</span>' : '') + '</div>';
     }
     el.innerHTML = h;
     return;
@@ -600,18 +601,30 @@ cv.addEventListener('mousemove', e => {
   for(let k = 0; k < total; k++){ const dd = Math.abs(X(k) - mx); if(dd < bd){ bd = dd; best = k; } }
   if(best >= HIST){ hoverD = best - HIST; hoverI = null; }
   else { hoverI = vs + best; hoverD = null; }
+  cv.style.cursor = clickTarget() != null ? 'pointer' : 'crosshair';
   drawSlice(hoverD, hoverI);
   resize();
 });
 cv.addEventListener('mouseleave', () => {
   hoverD = null; hoverI = null; drawSlice(null, null); resize();
 });
+/* 顶点拉回历史后, 锥区里的点同样是过去的日子, 也应该能点过去 */
+function clickTarget(){
+  if(hoverI != null) return hoverI;
+  if(hoverD != null){
+    const t = apexI() + hoverD;
+    if(t <= lastI()) return t;      // 已经发生过的才可以当顶点
+  }
+  return null;
+}
 cv.addEventListener('click', () => {
-  if(hoverI == null || hoverI < 30) return;
-  APEX = hoverI >= lastI() ? null : hoverI;
+  const t = clickTarget();
+  if(t == null || t < 30) return;
+  APEX = t >= lastI() ? null : t;
   hoverI = null; hoverD = null;
   render();
 });
+cv.addEventListener('mousedown', e => { if(clickTarget() != null) e.preventDefault(); });
 window.addEventListener('resize', () => resize());
 
 select();
