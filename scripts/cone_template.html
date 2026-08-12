@@ -5,25 +5,25 @@
   :root{
     --bg:#faf9f7; --card:#fff; --card2:#f5f3ef; --ink:#1d1c1a; --ink2:#4a4844;
     --muted:#8b8880; --line:#e3e0d9; --brand:#1f4e79; --brand-soft:#e8eff6;
-    --red:#c0392b; --red-bg:rgba(192,57,43,.08); --green:#2e7d46; --amber:#bf7d16;
+    --red:#c0392b; --green:#2e7d46; --amber:#bf7d16;
     --r:10px; --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
     font:15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;}
-  .wrap{max-width:1120px;margin:0 auto;padding:22px 20px 60px;}
+  .wrap{max-width:1180px;margin:0 auto;padding:22px 20px 60px;}
   .eyebrow{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
     font-style:italic;margin-bottom:4px;}
   h1{font-size:23px;font-weight:700;margin:0 0 4px;letter-spacing:-.01em;}
   .sub{font-size:13px;color:var(--ink2);}
-  .head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px;}
+  .head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px;}
   .tabs{display:flex;gap:6px;flex-wrap:wrap;}
   .tabs button{border:1px solid var(--line);background:var(--card);color:var(--ink2);
     padding:7px 14px;border-radius:var(--r);font-size:13.5px;cursor:pointer;transition:.12s;}
   .tabs button:hover{border-color:var(--brand);}
   .tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:600;}
 
-  .bar{display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:12.5px;
+  .bar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:12.5px;
     color:var(--ink2);margin-bottom:14px;}
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;}
   .seg button{border:0;background:var(--card);color:var(--ink2);padding:5px 12px;
@@ -31,42 +31,42 @@
   .seg button.on{background:var(--brand);color:#fff;font-weight:600;}
   label.ck{display:inline-flex;align-items:center;gap:5px;cursor:pointer;}
 
-  .hero{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1.6fr);gap:14px;margin-bottom:16px;}
-  @media(max-width:860px){.hero{grid-template-columns:1fr;}}
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;}
   .card h3{margin:0 0 10px;font-size:12.5px;font-weight:600;color:var(--muted);
     letter-spacing:.04em;text-transform:uppercase;}
-
-  .zbig{display:flex;align-items:baseline;gap:10px;margin:2px 0 8px;}
-  .zbig .v{font-family:var(--mono);font-size:40px;font-weight:700;line-height:1;letter-spacing:-.02em;}
-  .zbig .u{font-size:14px;color:var(--muted);}
-  .verdict{font-size:13px;font-weight:600;padding:3px 10px;border-radius:20px;display:inline-block;}
-  .v-deep{background:var(--red-bg);color:var(--red);}
-  .v-mid{background:rgba(191,125,22,.12);color:var(--amber);}
-  .v-shallow{background:var(--card2);color:var(--ink2);}
-  .kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:3px 0;}
+  .kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:2px 0;}
   .kv .k{color:var(--muted);} .kv .v{font-family:var(--mono);}
 
+  .top{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:14px;margin-bottom:14px;}
+  @media(max-width:900px){.top{grid-template-columns:1fr;}}
+
   table{width:100%;border-collapse:collapse;font-size:13px;}
-  th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line);}
-  th{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+  th,td{padding:6px 7px;text-align:right;border-bottom:1px solid var(--line);}
+  th{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.03em;}
   th:first-child,td:first-child{text-align:left;}
   td.mono{font-family:var(--mono);}
-  tr.hit{background:var(--brand-soft);}
-  tr.hit td{font-weight:600;}
   .pos{color:var(--green);} .neg{color:var(--red);}
+  .lvdot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;vertical-align:middle;}
 
-  #chart{position:relative;width:100%;background:var(--card);border:1px solid var(--line);
+  .chartrow{display:grid;grid-template-columns:minmax(0,1fr) 210px;gap:12px;}
+  @media(max-width:900px){.chartrow{grid-template-columns:1fr;}}
+  #chart{position:relative;background:var(--card);border:1px solid var(--line);
     border-radius:var(--r);padding:10px 6px 4px;}
-  canvas{display:block;width:100%;}
-  #tip{position:absolute;pointer-events:none;background:rgba(29,28,26,.94);color:#fff;
-    font-size:12px;line-height:1.5;padding:7px 10px;border-radius:6px;display:none;z-index:9;
-    font-family:var(--mono);white-space:nowrap;}
+  canvas{display:block;width:100%;cursor:crosshair;}
+  #slice{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 13px;}
+  #slice .sh{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:2px;}
+  #slice .sm{font-size:11.5px;color:var(--muted);margin-bottom:8px;}
+  .stab{width:100%;font-size:12.5px;}
+  .stab td{padding:3px 2px;border-bottom:1px dotted var(--line);}
+  .stab tr.me td{background:var(--brand-soft);font-weight:700;color:var(--brand);}
+  .stab tr.me td:first-child{border-left:2px solid var(--brand);}
+
   .note{font-size:12.5px;color:var(--ink2);line-height:1.75;background:var(--card);
     border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-top:16px;}
   .note b{color:var(--ink);}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;}
-  @media(max-width:860px){.grid2{grid-template-columns:1fr;}}
+  .verdict{background:#fdf6ec;border:1px solid #f0dcb8;border-radius:var(--r);
+    padding:12px 15px;margin-top:14px;font-size:13px;line-height:1.8;}
+  .verdict b{color:#8a5a00;}
 </style>
 
 <div class="wrap">
@@ -74,201 +74,125 @@
     <div>
       <div class="eyebrow">Volatility Probability Cone</div>
       <h1>A股期权 · 波动概率锥</h1>
-      <div class="sub">用期权 IV 把跌幅换算成 σ · 判断当前位置够不够深 · 给出可挂单的各层锥位</div>
+      <div class="sub">从今天用 IV 向未来张开 · 看挂单价位该放哪 · 附"挂了能不能成交、能不能抄到底"的回测</div>
     </div>
     <div class="tabs" id="tabs"></div>
   </div>
 
   <div class="bar">
-    <span>模式</span>
-    <span class="seg" id="modeSeg">
-      <button data-m="M" class="on">每月重置</button>
-      <button data-m="W">每周重置</button>
-      <button data-m="A">高点锚定</button>
+    <span>展望</span>
+    <span class="seg" id="hSeg">
+      <button data-h="5">1周</button>
+      <button data-h="10">2周</button>
+      <button data-h="20" class="on">1月</button>
+      <button data-h="60">3月</button>
     </span>
-    <span>下沿用</span>
+    <span>IV</span>
     <span class="seg" id="ivSeg">
-      <button data-v="atm" class="on">ATM IV</button>
-      <button data-v="put">25Δ put IV</button>
+      <button data-v="atm" class="on">ATM</button>
+      <button data-v="put">25Δ put</button>
     </span>
-    <span class="seg" id="anchorSeg" style="display:none">
-      <button data-a="auto" class="on">60日高点</button>
-      <button data-a="pick">图上点选</button>
-    </span>
-    <label class="ck"><input type="checkbox" id="tgFwd" checked> 前瞻锥（未来20日）</label>
+    <label class="ck"><input type="checkbox" id="tgPanic"> 回测只看恐慌度≥0.7 的日子</label>
     <span id="hint" style="color:var(--muted)"></span>
   </div>
-  <div id="modeNote" style="font-size:12.5px;color:var(--ink2);background:var(--card2);
-    border-left:3px solid var(--brand);border-radius:0 7px 7px 0;padding:8px 12px;margin-bottom:14px;"></div>
 
-  <div class="hero">
+  <div class="top">
     <div class="card">
-      <h3>当前位置</h3>
-      <div class="zbig"><span class="v" id="zv">—</span><span class="u">σ</span>
-        <span id="verdict" class="verdict v-shallow">—</span></div>
+      <h3>当前</h3>
+      <div style="font-family:var(--mono);font-size:30px;font-weight:700;line-height:1.1;"
+           id="kPx">—</div>
       <div class="kv"><span class="k">日期</span><span class="v" id="kDate">—</span></div>
-      <div class="kv"><span class="k">现价</span><span class="v" id="kPx">—</span></div>
-      <div class="kv"><span class="k" id="lAnchor">基准</span><span class="v" id="kAnchor">—</span></div>
-      <div class="kv"><span class="k" id="lDd">已跌 / 已过</span><span class="v" id="kDd">—</span></div>
-      <div class="kv"><span class="k" id="lSig">IV → σ</span><span class="v" id="kSig">—</span></div>
+      <div class="kv"><span class="k">ATM IV</span><span class="v" id="kIv">—</span></div>
+      <div class="kv"><span class="k">展望期 σ</span><span class="v" id="kSig">—</span></div>
       <div class="kv"><span class="k">恐慌度</span><span class="v" id="kPanic">—</span></div>
+      <div class="kv"><span class="k">距60日高</span><span class="v" id="kDd">—</span></div>
     </div>
     <div class="card">
-      <h3>锥位 · 还要跌多少才到 · 该层历史表现（未来20日）</h3>
+      <h3 id="lvHead">挂单指引 · 各层价位与历史表现</h3>
       <table id="levels"><thead><tr>
-        <th>层</th><th>价位</th><th>距现价</th><th>n</th><th>均值</th><th>胜率</th>
+        <th>层</th><th>挂单价</th><th>距现价</th><th>成交率</th>
+        <th>成交后20日</th><th>胜率</th><th>成交后还要跌</th><th>离真底</th><th>平均等待</th>
       </tr></thead><tbody></tbody></table>
     </div>
   </div>
 
-  <div id="chart"><canvas id="cv"></canvas><div id="tip"></div></div>
-
-  <div class="grid2">
-    <div class="card">
-      <h3>本标的 · 分层前瞻统计</h3>
-      <table id="stSelf"><thead><tr><th>层</th><th>n</th><th>5日</th><th>10日</th><th>20日</th></tr></thead><tbody></tbody></table>
-    </div>
-    <div class="card">
-      <h3>四标的池化 · 分层前瞻统计</h3>
-      <table id="stPool"><thead><tr><th>层</th><th>n</th><th>5日</th><th>10日</th><th>20日</th></tr></thead><tbody></tbody></table>
-    </div>
+  <div class="chartrow">
+    <div id="chart"><canvas id="cv"></canvas></div>
+    <div id="slice"></div>
   </div>
 
+  <div class="verdict" id="verdict"></div>
+
   <div class="note">
-    <b>怎么算</b>：周期重置模式下，上期最后一个交易日的收盘价 = base，当天的 IV 定 σ = IV×√(N/252)
-    （周 N=5、月 N=21），本期内两者<b>都不再变</b>，z = (现价/base − 1)/σ。
-    因此 −1σ 在期初就是一个确定价位，可以直接挂单——这是它相对高点锚定的关键差别：
-    锚定模式的 σ 随"已跌了多少天"张开，而开跌当天你并不知道会跌多久。<br>
+    <b>锥怎么画</b>：以今天收盘为顶点，用今天的 ATM IV，向未来张开
+    P × (1 ± m·IV·√(d/252))，d 是未来第几个交易日。跟你看 SOXX expected move 是同一个口径，
+    只是这里同时画 ±0.5/1/1.5/2σ 四层。切「25Δ put」会用偏斜后的波动率画下沿（更宽更保守）。<br>
 
-    <b>三种模式的实测差距</b>（池化四标的、未来20日）：
-    月度重置<b>分层最干净且严格单调</b>——≤−2σ +7.5%/胜率90%(n=29)、−2~−1.5σ +4.5%/71%、
-    −1.5~−1σ +2.6%/47%、−1~−0.5σ +1.4%/46%、−0.5~0σ +0.25%/43%。
-    周度在 −2~−1.5σ 处塌陷（+0.6%/55%，比更浅的 −1.5~−1σ 还差），粒度细但噪音大。
-    另测过按已过天数缩放 σ 的版本（第1天跌1σ 比第5天跌1σ 更极端），
-    结果<b>反而更差</b>（月度 ≤−2σ 掉到 +3.9%/67%），所以这里固定 σ 不缩放。<br>
+    <b>回测怎么做</b>：每天在 −mσ（H=20 日口径）挂一张买单、20 个交易日内有效，
+    <b>用日内最低价判成交</b>（触及即成交，不是收盘价），成交后持有 20 个交易日。
+    池化四标的、共约 5000 个交易日。样本重叠严重（每天都挂单），
+    所以胜率是<b>方向性参考而非独立试验</b>，深层尤其如此（−2σ 只有约 300 次成交）。<br>
 
-    <b>为什么看 σ 不看跌幅</b>：7月同一轮里科创50 跌 23%、中证1000 跌 13.3%，
-    但科创的锚点 IV 是 60.7%、中证1000 只有 25.7%，换算成 σ 后中证1000 反而更深。
-    按绝对跌幅挑会挑错标的。<br>
+    <b>已知局限</b>：σ 归一并未跑赢信号台现有的 mom_pct 闸门，它的价值是给<b>可挂单的价位</b>；
+    回测未计成本与冲击，也假设你挂的单一定能在触及时成交。<br>
 
-    <b>−1σ 到 −0.5σ 是"半山腰"</b>：不管哪种模式，这一档都是全表最弱的
-    （锚定口径下甚至为负：3714 天里 20日均值 −0.13%、胜率 42%）。分水岭在 −1.5σ。<br>
-
-    <b>已知局限</b>：σ 归一在统计上<b>并未跑赢</b>信号台现有的 mom_pct 闸门
-    （各取最极端 15%：均值 +2.57% vs +2.60%、胜率 55% vs 57%）。
-    它的价值是给出<b>可执行价位</b>而非又一个信号——分位数没法挂单，锥位可以。
-    深档样本都很薄（月度 ≤−2σ 仅 29 天），胜率 90% 不可当稳定预期。
-    <b>25Δ put IV</b> 选项把 σ 换成偏斜后的波动率（更宽更保守），未做独立验证，仅供对照。
-    表中带 <span style="color:var(--amber)">*</span> 的行样本不足 40 天，数值已置灰。
+    模式切换里的「高点锚定」保留在
+    <a href="#" id="toggleLegacy" style="color:var(--brand)">历史分期视图</a>，
+    那是另一个问题（这轮从高点算走到多深），不用于挂单。
   </div>
 </div>
 
-<script>const DATA = /*__CONE_DATA__*/;
+<script>
+const DATA = /*__CONE_DATA__*/;
 const META = DATA._meta;
 const KEYS = Object.keys(DATA).filter(k => !k.startsWith('_'));
-const POOL = { A: DATA._pooled, W: DATA._pooledW, M: DATA._pooledM };
-/* 锚定锥层次到 -2.5σ; 周期重置带固定期限, -2σ 以下极少触及, 只到 -2σ */
-const LV = { A: [0.5, 1, 1.5, 2, 2.5], W: [0.5, 1, 1.5, 2], M: [0.5, 1, 1.5, 2] };
-const NOTE = {
-  M: '每月重置：上月最后一个交易日的收盘价与 IV 定死本月的 base 和 σ（21 日），月内不再变。' +
-     '所以 −1σ/−2σ 在月初就是<b>确定价位，可以直接挂单</b>。<b>四个框架里分层最干净的一个</b>' +
-     '（≤−2σ 未来20日 +7.5%、胜率 90%，严格单调递减到 −0.5~0σ 的 +0.25%）。',
-  W: '每周重置：上周最后一个交易日定死本周的 base 和 σ（5 日）。粒度最细、最贴合盯盘节奏，' +
-     '但<b>统计上比月度吵</b> —— −2~−1.5σ 那档塌到 +0.62%/55%，比更浅的 −1.5~−1σ 还差，样本也薄。' +
-     '看位置可以，别拿它当分层依据。',
-  A: '高点锚定：从过去 60 日最高收盘起算，σ 随<b>已跌天数</b>张开。它是因果的（锚点和 IV 当时都已知），' +
-     '但横轴依赖"这轮跌了多久"—— 开跌那天你并不知道会跌 30 天，' +
-     '所以它<b>不能在期初给你一个可挂单的价位</b>，只适合回看"这轮走到多深了"。'
-};
+const LEVELS = META.levels;
+const COLORS = { 0.5:'#e8a598', 1:'#d9705c', 1.5:'#c0392b', 2:'#8e2318' };
 
-let curKey = KEYS[0], D = null, MODE = 'M', ANCHOR = 'auto', pickI = null;
-let IVMODE = 'atm', SHOWFWD = true, hoverI = -1, LAYOUT = null, PREVEND = null;
+let curKey = KEYS[0], D = null, HORIZON = 20, IVMODE = 'atm', USE_PANIC = false;
+let hoverD = null;           // 悬浮在未来第几天(null = 不在锥区)
+let hoverI = null;           // 悬浮在历史第几天
+let LAYOUT = null;
 
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
-const chart = document.getElementById('chart'), tip = document.getElementById('tip');
+const chart = document.getElementById('chart');
 
 function fmtP(v){ return v >= 100 ? v.toFixed(1) : v.toFixed(3); }
 function pct(v, nd){ return (v * 100).toFixed(nd === undefined ? 1 : nd) + '%'; }
 function fmtD(s){ return s.slice(0,4) + '-' + s.slice(4,6) + '-' + s.slice(6,8); }
-function isPeriod(){ return MODE === 'W' || MODE === 'M'; }
-
-/* 每天对应的"上期最后一个交易日"下标 —— base 与 σ 都取自那天, 期初即已知 */
-function buildPrevEnd(){
-  const f = D[MODE] ? D[MODE].first : null;
-  if(!f){ PREVEND = null; return; }
-  const out = new Array(f.length).fill(null);
-  let start = 0;
-  for(let i = 0; i < f.length; i++){
-    if(f[i]) start = i;
-    out[i] = start > 0 ? start - 1 : null;
-  }
-  PREVEND = out;
+function last(){ return D.dates.length - 1; }
+function ivNow(){
+  const i = last();
+  return (IVMODE === 'put' && D.iv_put[i] != null) ? D.iv_put[i] : D.iv[i];
 }
-
-function ivAt(j){
-  if(IVMODE === 'put' && D.iv_put[j] != null) return D.iv_put[j];
-  return D.iv[j];
+/* 锥在未来第 d 个交易日、第 m 层的价位 */
+function coneAt(d, m){
+  return D.price[last()] * (1 - m * ivNow() * Math.sqrt(Math.max(d, 0) / 252));
 }
-
-/* 三种模式统一出口: 给定第 i 天, 返回 {base, sigma, refIdx, z, elapsed, total} */
-function ctxAt(i){
-  if(isPeriod()){
-    const j = PREVEND ? PREVEND[i] : null;
-    if(j == null) return null;
-    const n = META.period_n[MODE];
-    const sigma = ivAt(j) * Math.sqrt(n / 252);
-    let el = 0; for(let k = j + 1; k <= i; k++) el++;
-    return { base: D.price[j], sigma, refIdx: j, elapsed: el, total: n,
-             z: (D.price[i] / D.price[j] - 1) / sigma };
-  }
-  const j = (ANCHOR === 'pick' && pickI != null && pickI < i) ? pickI : D.anchor[i];
-  if(j == null || i - j < META.min_days) return null;
-  const sigma = ivAt(j) * Math.sqrt((i - j) / 252);
-  return { base: D.price[j], sigma, refIdx: j, elapsed: i - j, total: i - j,
-           z: (D.price[i] / D.price[j] - 1) / sigma };
+function coneUp(d, m){
+  return D.price[last()] * (1 + m * ivNow() * Math.sqrt(Math.max(d, 0) / 252));
 }
-
-function bandOf(z){
-  if(z == null) return null;
-  if(isPeriod()){
-    if(z <= -2) return '≤-2σ';
-    if(z <= -1.5) return '-2~-1.5σ';
-    if(z <= -1) return '-1.5~-1σ';
-    if(z <= -0.5) return '-1~-0.5σ';
-    if(z <= 0) return '-0.5~0σ';
-    return '>0σ';
-  }
-  if(z <= -2.5) return '≤-2.5σ';
-  if(z <= -2) return '-2.5~-2σ';
-  if(z <= -1.5) return '-2~-1.5σ';
-  if(z <= -1) return '-1.5~-1σ';
-  if(z <= -0.5) return '-1~-0.5σ';
-  return '>-0.5σ';
+/* JSON 键由 Python str(float) 生成("1.0"), JS String(1.0) 得 "1", 必须对齐 */
+function bkey(m){ return m.toFixed(1); }
+function btOf(){
+  const src = USE_PANIC ? 'bt_panic' : 'bt';
+  return { self: D[src], pool: USE_PANIC ? DATA._pooledBtPanic : DATA._pooledBt };
 }
-function statsOf(){ return isPeriod() ? D[MODE].stats : D.stats; }
 
 /* ---------- 控件 ---------- */
 const tabs = document.getElementById('tabs');
 KEYS.forEach(k => {
   const b = document.createElement('button');
   b.textContent = DATA[k].name; b.dataset.k = k;
-  b.onclick = () => { curKey = k; pickI = null; select(); };
+  b.onclick = () => { curKey = k; select(); };
   tabs.appendChild(b);
 });
-document.getElementById('modeSeg').onclick = e => {
+document.getElementById('hSeg').onclick = e => {
   const b = e.target.closest('button'); if(!b) return;
-  MODE = b.dataset.m; pickI = null;
-  document.querySelectorAll('#modeSeg button').forEach(x => x.classList.toggle('on', x === b));
-  document.getElementById('anchorSeg').style.display = MODE === 'A' ? '' : 'none';
-  document.getElementById('hint').textContent = '';
-  buildPrevEnd(); render();
-};
-document.getElementById('anchorSeg').onclick = e => {
-  const b = e.target.closest('button'); if(!b) return;
-  ANCHOR = b.dataset.a;
-  document.querySelectorAll('#anchorSeg button').forEach(x => x.classList.toggle('on', x === b));
+  HORIZON = +b.dataset.h;
+  document.querySelectorAll('#hSeg button').forEach(x => x.classList.toggle('on', x === b));
   document.getElementById('hint').textContent =
-    ANCHOR === 'pick' ? (pickI == null ? '← 在图上点一个高点作锚' : '') : '';
+    HORIZON === META.H ? '' : '（回测口径固定为 1 月，其它展望期只改画图，不改回测数字）';
   render();
 };
 document.getElementById('ivSeg').onclick = e => {
@@ -277,99 +201,76 @@ document.getElementById('ivSeg').onclick = e => {
   document.querySelectorAll('#ivSeg button').forEach(x => x.classList.toggle('on', x === b));
   render();
 };
-document.getElementById('tgFwd').onchange = e => { SHOWFWD = e.target.checked; render(); };
+document.getElementById('tgPanic').onchange = e => { USE_PANIC = e.target.checked; render(); };
 
 function select(){
   D = DATA[curKey];
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.k === curKey));
-  tip.style.display = 'none'; hoverI = -1;
-  buildPrevEnd(); render();
+  hoverD = null; hoverI = null;
+  render();
 }
 
-/* ---------- 视窗 ---------- */
-function viewRange(){
-  const n = D.dates.length, e = n - 1;
-  const W = isPeriod() ? (MODE === 'W' ? 60 : 150) : 150;
-  let s = Math.max(0, e - W + 1);
-  if(!isPeriod()){
-    const c = ctxAt(e);
-    if(c) s = Math.min(s, Math.max(0, c.refIdx - 15));
-  }
-  return { s, e };
-}
-
+/* ---------- 渲染 ---------- */
 function render(){
-  document.getElementById('modeNote').innerHTML = NOTE[MODE];
-  const n = D.dates.length, i = n - 1, c = ctxAt(i);
-  const z = c ? c.z : null;
-
-  document.getElementById('zv').textContent = z == null ? '—' : z.toFixed(2);
-  const vd = document.getElementById('verdict');
-  if(z == null){ vd.className = 'verdict v-shallow'; vd.textContent = '—'; }
-  else if(z <= -1.5){ vd.className = 'verdict v-deep'; vd.textContent = '深档 · 位置够'; }
-  else if(z <= -1){ vd.className = 'verdict v-mid'; vd.textContent = '刚过 -1σ'; }
-  else { vd.className = 'verdict v-shallow'; vd.textContent = '半山腰 · 未到位'; }
-
-  document.getElementById('lAnchor').textContent = isPeriod() ? '期初基准' : '锚点';
-  document.getElementById('lDd').textContent = isPeriod() ? '距基准 / 已过' : '已跌 / 已过';
-  document.getElementById('lSig').textContent = isPeriod() ? '基准日 IV → 本期σ' : '锚点 IV → σ';
-  document.getElementById('kDate').textContent = fmtD(D.dates[i]);
+  const i = last(), sg = ivNow() * Math.sqrt(HORIZON / 252);
   document.getElementById('kPx').textContent = fmtP(D.price[i]);
-  document.getElementById('kAnchor').textContent =
-    c ? fmtD(D.dates[c.refIdx]) + ' @ ' + fmtP(c.base) : '—';
-  document.getElementById('kDd').textContent = c
-    ? pct(D.price[i] / c.base - 1) + ' / ' + c.elapsed + (isPeriod() ? '之' + c.total : '') + ' 日'
-    : '—';
-  document.getElementById('kSig').textContent =
-    c ? pct(ivAt(c.refIdx)) + ' → ' + pct(c.sigma) : '—';
-  document.getElementById('kPanic').textContent =
-    D.panic[i] == null ? '—' : D.panic[i].toFixed(2);
+  document.getElementById('kDate').textContent = fmtD(D.dates[i]);
+  document.getElementById('kIv').textContent = pct(D.iv[i]);
+  document.getElementById('kSig').textContent = pct(sg);
+  document.getElementById('kPanic').textContent = D.panic[i] == null ? '—' : D.panic[i].toFixed(2);
+  const hi60 = Math.max(...D.price.slice(Math.max(0, i - 59), i + 1));
+  document.getElementById('kDd').textContent = pct(D.price[i] / hi60 - 1);
 
-  /* 锥位表 */
+  const bt = btOf();
+  document.getElementById('lvHead').textContent =
+    '挂单指引 · 各层价位与历史表现' + (USE_PANIC ? '（仅恐慌度≥0.7 的日子）' : '');
+
   const tb = document.querySelector('#levels tbody'); tb.innerHTML = '';
-  const curBand = bandOf(z), st_all = statsOf();
-  LV[MODE].forEach(m => {
-    const price = c ? c.base * (1 - m * c.sigma) : null;
-    const gap = price == null ? null : price / D.price[i] - 1;
-    const st = st_all.find(x => x.band === bandOf(-m)) || {};
-    const thin = st.n20 != null && st.n20 < 40;
+  LEVELS.forEach(m => {
+    const s = bt.self[bkey(m)] || {}, p = bt.pool[bkey(m)] || {};
+    const price = coneAt(HORIZON, m);
+    const gap = price / D.price[i] - 1;
+    const thin = (s.n_fill || 0) < 40;
+    const g = (v, f) => v == null ? '—' : f(v);
     const tr = document.createElement('tr');
-    if(curBand === bandOf(-m)) tr.className = 'hit';
-    const mv = st.m20, wv = st.w20;
     tr.innerHTML =
-      `<td>-${m}σ</td><td class="mono">${price == null ? '—' : fmtP(price)}</td>` +
-      `<td class="mono ${gap != null && gap < 0 ? 'neg' : ''}">${gap == null ? '—' : pct(gap)}</td>` +
-      `<td class="mono">${st.n20 || '—'}${thin ? '<span style="color:var(--amber)">*</span>' : ''}</td>` +
-      `<td class="mono ${mv == null ? '' : (mv > 0 ? 'pos' : 'neg')}"${thin ? ' style="opacity:.55"' : ''}>${mv == null ? '—' : pct(mv, 2)}</td>` +
-      `<td class="mono"${thin ? ' style="opacity:.55"' : ''}>${wv == null ? '—' : pct(wv, 0)}</td>`;
+      `<td><span class="lvdot" style="background:${COLORS[m]}"></span>-${m}σ</td>` +
+      `<td class="mono"><b>${fmtP(price)}</b></td>` +
+      `<td class="mono neg">${pct(gap)}</td>` +
+      `<td class="mono">${g(s.fill, v => pct(v, 0))}` +
+        `<span style="color:var(--muted)"> / ${g(p.fill, v => pct(v, 0))}</span></td>` +
+      `<td class="mono ${(s.ret || 0) > 0 ? 'pos' : ''}"${thin ? ' style="opacity:.55"' : ''}>` +
+        `${g(s.ret, v => pct(v, 1))}<span style="color:var(--muted)"> / ${g(p.ret, v => pct(v, 1))}</span></td>` +
+      `<td class="mono"${thin ? ' style="opacity:.55"' : ''}>${g(s.win, v => pct(v, 0))}` +
+        `<span style="color:var(--muted)"> / ${g(p.win, v => pct(v, 0))}</span></td>` +
+      `<td class="mono neg">${g(p.mae, v => pct(v, 1))}</td>` +
+      `<td class="mono">${g(p.vs_low, v => '+' + pct(v, 1))}</td>` +
+      `<td class="mono">${g(p.wait, v => v.toFixed(0) + '日')}</td>`;
     tb.appendChild(tr);
   });
 
-  fillStats('#stSelf tbody', st_all);
-  fillStats('#stPool tbody', POOL[MODE]);
-  resize();
-}
+  // 结论块用池化数字, 随恐慌门切换
+  const P = bt.pool, b1 = P['1.0'] || {}, b15 = P['1.5'] || {}, b2 = P['2.0'] || {}, b05 = P['0.5'] || {};
+  document.getElementById('verdict').innerHTML =
+    `<b>能不能抄到底？不能。</b>${USE_PANIC ? '（恐慌度≥0.7 口径）' : ''}` +
+    `任何一层成交后都还要再跌 ${pct(Math.abs(b15.mae || 0), 1)} 左右，` +
+    `成交价平均比这轮真正的最低点高 ${pct(b15.vs_low || 0, 1)}，` +
+    `只有约 ${pct(b15.near_bottom || 0, 0)} 的单子成交后基本没再跌。` +
+    `<b>挂得更深并不能少被套</b>——−0.5σ 成交后再跌 ${pct(Math.abs(b05.mae || 0), 1)}，` +
+    `−2σ 反而是 ${pct(Math.abs(b2.mae || 0), 1)}。<br>` +
+    `<b>它能做的是"买得合理便宜"。</b>不挂单随便哪天买，20 日后 ${pct(b1.base || 0, 1)}／胜率 ${pct(b1.base_win || 0, 0)}；` +
+    `挂 −0.5σ 几乎没有增量（${pct(b05.ret || 0, 1)}／${pct(b05.win || 0, 0)}，成交率 ${pct(b05.fill || 0, 0)}），` +
+    `−1.5σ 才拉开（${pct(b15.ret || 0, 1)}／${pct(b15.win || 0, 0)}），但成交率只有 ${pct(b15.fill || 0, 0)}，` +
+    `平均要等 ${(b15.wait || 0).toFixed(0)} 天。`;
 
-function fillStats(sel, rows){
-  const tb = document.querySelector(sel); tb.innerHTML = '';
-  rows.forEach(r => {
-    const thin = (r.n20 || 0) < 40;
-    const tr = document.createElement('tr');
-    let h = `<td>${r.band}</td><td class="mono">${r.n20 || 0}` +
-            `${thin ? '<span style="color:var(--amber)">*</span>' : ''}</td>`;
-    [5, 10, 20].forEach(k => {
-      const m = r['m' + k], w = r['w' + k];
-      h += `<td class="mono ${m == null ? '' : (m > 0 ? 'pos' : 'neg')}"${thin ? ' style="opacity:.55"' : ''}>` +
-           `${m == null ? '—' : pct(m, 1) + '<span style="color:var(--muted)"> / ' + pct(w, 0) + '</span>'}</td>`;
-    });
-    tr.innerHTML = h; tb.appendChild(tr);
-  });
+  resize();
+  drawSlice(hoverD, hoverI);
 }
 
 /* ---------- 绘图 ---------- */
-const PADL = 56, PADR = 62, PADT = 14, PADB = 26;
+const PADL = 58, PADR = 74, PADT = 14, PADB = 26;
 function resize(){
-  const w = chart.clientWidth - 12, h = 380;
+  const w = chart.clientWidth - 12, h = 400;
   const dpr = window.devicePixelRatio || 1;
   cv.width = w * dpr; cv.height = h * dpr;
   cv.style.width = w + 'px'; cv.style.height = h + 'px';
@@ -379,31 +280,23 @@ function resize(){
 
 function draw(W, H){
   ctx.clearRect(0, 0, W, H);
-  const { s: vs, e: ve } = viewRange();
-  const nView = ve - vs + 1, fwdN = SHOWFWD ? 20 : 0, total = nView + fwdN;
+  const i = last();
+  const HIST = Math.min(i, Math.max(40, HORIZON * 3));   // 左侧历史长度
+  const vs = i - HIST, total = HIST + HORIZON + 1;
   const FONT = getComputedStyle(document.body).fontFamily;
-  const levels = LV[MODE], deepest = levels[levels.length - 1];
 
   let lo = Infinity, hi = -Infinity;
-  for(let i = vs; i <= ve; i++){
-    const p = D.price[i]; if(p == null) continue;
+  for(let k = vs; k <= i; k++){
+    const p = D.price[k]; if(p == null) continue;
     lo = Math.min(lo, p); hi = Math.max(hi, p);
-    const c = ctxAt(i);
-    if(c){
-      lo = Math.min(lo, c.base * (1 - deepest * c.sigma));
-      hi = Math.max(hi, c.base * (1 + (isPeriod() ? 1 : 0.02) * c.sigma));
-    }
   }
-  const last = D.price[ve], ivNow = ivAt(ve);
-  if(fwdN){
-    const sg = ivNow * Math.sqrt(fwdN / 252);
-    lo = Math.min(lo, last * (1 - 2 * sg)); hi = Math.max(hi, last * (1 + 2 * sg));
-  }
-  const pad = (hi - lo) * 0.05; lo -= pad; hi += pad;
+  lo = Math.min(lo, coneAt(HORIZON, LEVELS[LEVELS.length - 1]));
+  hi = Math.max(hi, coneUp(HORIZON, 2));
+  const pad = (hi - lo) * 0.06; lo -= pad; hi += pad;
 
-  const X = k => PADL + (W - PADL - PADR) * (k / Math.max(1, total - 1));
+  const X = k => PADL + (W - PADL - PADR) * (k / (total - 1));
   const Y = v => PADT + (H - PADT - PADB) * (1 - (v - lo) / (hi - lo));
-  LAYOUT = { X, Y, vs, ve, nView, total };
+  LAYOUT = { X, Y, vs, i, HIST, total, W, H };
 
   ctx.strokeStyle = '#e3e0d9'; ctx.lineWidth = 1;
   ctx.fillStyle = '#8b8880'; ctx.font = '11px ' + FONT; ctx.textAlign = 'right';
@@ -413,195 +306,140 @@ function draw(W, H){
     ctx.fillText(fmtP(v), PADL - 6, y + 4);
   }
   ctx.textAlign = 'center';
-  for(let k = 0; k < nView; k += Math.ceil(nView / 7)){
+  for(let k = 0; k <= HIST; k += Math.ceil(HIST / 5)){
     const d = D.dates[vs + k];
     ctx.fillText(d.slice(2,4) + '-' + d.slice(4,6) + '-' + d.slice(6,8), X(k), H - 8);
   }
-
-  if(isPeriod()) drawSteps(vs, ve, nView, X, Y, levels, FONT, H);
-  else drawFan(vs, ve, nView, X, Y, levels, FONT);
-
-  /* 前瞻锥: 从今天按当前 IV 向未来 20 日展开 */
-  if(fwdN){
-    for(const [m, up] of [[1, 1], [2, 1], [1, -1], [2, -1]]){
-      ctx.beginPath();
-      for(let dd = 0; dd <= fwdN; dd++){
-        const sg = ivNow * Math.sqrt(dd / 252);
-        const y = Y(last * (1 + up * m * sg)), x = X(nView - 1 + dd);
-        if(dd === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      }
-      ctx.strokeStyle = up > 0 ? 'rgba(31,78,121,.4)' : 'rgba(192,57,43,.5)';
-      ctx.lineWidth = m === 1 ? 1.4 : 1; ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
-    }
-    ctx.strokeStyle = '#c9c5bc'; ctx.setLineDash([2, 3]);
-    ctx.beginPath(); ctx.moveTo(X(nView - 1), PADT); ctx.lineTo(X(nView - 1), H - PADB); ctx.stroke();
-    ctx.setLineDash([]);
-    const sg = ivNow * Math.sqrt(fwdN / 252);
-    ctx.fillStyle = 'rgba(192,57,43,.8)'; ctx.textAlign = 'left'; ctx.font = '10.5px ' + FONT;
-    ctx.fillText('20日 -1σ ' + fmtP(last * (1 - sg)), X(total - 1) - 2, Y(last * (1 - sg)) + 3);
-    ctx.fillText('-2σ ' + fmtP(last * (1 - 2 * sg)), X(total - 1) - 2, Y(last * (1 - 2 * sg)) + 3);
+  for(let d = Math.ceil(HORIZON / 3); d <= HORIZON; d += Math.ceil(HORIZON / 3)){
+    ctx.fillStyle = '#b0ada4';
+    ctx.fillText('+' + d + '日', X(HIST + d), H - 8);
   }
 
+  // 锥体: 由外向内填充
+  for(let li = LEVELS.length - 1; li >= 0; li--){
+    const mo = LEVELS[li], mi = li === 0 ? 0 : LEVELS[li - 1];
+    ctx.beginPath();
+    for(let d = 0; d <= HORIZON; d++) ctx.lineTo(X(HIST + d), Y(coneAt(d, mo)));
+    for(let d = HORIZON; d >= 0; d--) ctx.lineTo(X(HIST + d), Y(coneAt(d, mi)));
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(192,57,43,' + (0.05 + li * 0.03) + ')'; ctx.fill();
+  }
+  // 上沿(浅蓝, 只画 1σ/2σ 作对称参考)
+  for(const m of [1, 2]){
+    ctx.beginPath();
+    for(let d = 0; d <= HORIZON; d++){
+      const x = X(HIST + d), y = Y(coneUp(d, m));
+      if(d === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = 'rgba(31,78,121,' + (m === 1 ? .42 : .25) + ')';
+    ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // 下沿各层实线 + 右侧标签
+  ctx.font = '10.5px ' + FONT; ctx.textAlign = 'left';
+  for(const m of LEVELS){
+    ctx.beginPath();
+    for(let d = 0; d <= HORIZON; d++){
+      const x = X(HIST + d), y = Y(coneAt(d, m));
+      if(d === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = COLORS[m]; ctx.lineWidth = m === 1 || m === 2 ? 1.6 : 1;
+    ctx.stroke();
+    ctx.fillStyle = COLORS[m];
+    ctx.fillText('-' + m + 'σ ' + fmtP(coneAt(HORIZON, m)), X(total - 1) + 3, Y(coneAt(HORIZON, m)) + 3);
+  }
+  ctx.fillStyle = 'rgba(31,78,121,.6)';
+  ctx.fillText('+1σ ' + fmtP(coneUp(HORIZON, 1)), X(total - 1) + 3, Y(coneUp(HORIZON, 1)) + 3);
+
+  // 今天的分隔线
+  ctx.strokeStyle = '#c9c5bc'; ctx.setLineDash([2, 3]);
+  ctx.beginPath(); ctx.moveTo(X(HIST), PADT); ctx.lineTo(X(HIST), H - PADB); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 历史价格线
   ctx.beginPath(); let st = false;
-  for(let i = vs; i <= ve; i++){
-    const p = D.price[i]; if(p == null){ st = false; continue; }
-    const x = X(i - vs), y = Y(p);
+  for(let k = vs; k <= i; k++){
+    const p = D.price[k]; if(p == null){ st = false; continue; }
+    const x = X(k - vs), y = Y(p);
     if(!st){ ctx.moveTo(x, y); st = true; } else ctx.lineTo(x, y);
   }
   ctx.strokeStyle = '#1f4e79'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
 
-  const cc = ctxAt(ve);
-  if(!isPeriod() && cc && cc.refIdx >= vs){
-    ctx.beginPath(); ctx.arc(X(cc.refIdx - vs), Y(cc.base), 4.5, 0, 7);
-    ctx.fillStyle = '#bf7d16'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
-  }
-  ctx.beginPath(); ctx.arc(X(nView - 1), Y(last), 4.5, 0, 7);
+  ctx.beginPath(); ctx.arc(X(HIST), Y(D.price[i]), 4.5, 0, 7);
   ctx.fillStyle = '#1f4e79'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
-}
 
-/* 周期重置: 阶梯带 —— 期内水平, 期末垂直跳到新一期 */
-function drawSteps(vs, ve, nView, X, Y, levels, FONT, H){
-  const stepPath = m => {
-    ctx.beginPath();
-    let prevY = null, started = false;
-    for(let i = vs; i <= ve; i++){
-      const c = ctxAt(i);
-      if(!c){ started = false; prevY = null; continue; }
-      const x = X(i - vs), y = Y(c.base * (1 - m * c.sigma));
-      if(!started){ ctx.moveTo(x, y); started = true; }
-      else if(prevY !== null && Math.abs(y - prevY) > 0.5){ ctx.lineTo(x, prevY); ctx.lineTo(x, y); }
-      else ctx.lineTo(x, y);
-      prevY = y;
+  // 悬浮竖线
+  const hx = hoverD != null ? X(HIST + hoverD) : (hoverI != null ? X(hoverI - vs) : null);
+  if(hx != null){
+    ctx.strokeStyle = 'rgba(29,28,26,.3)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(hx, PADT); ctx.lineTo(hx, H - PADB); ctx.stroke(); ctx.setLineDash([]);
+    if(hoverD != null){
+      for(const m of LEVELS){
+        ctx.beginPath(); ctx.arc(hx, Y(coneAt(hoverD, m)), 3.4, 0, 7);
+        ctx.fillStyle = COLORS[m]; ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.2; ctx.stroke();
+      }
     }
-  };
-  // 相邻层之间填充, 越深越重
-  for(let li = levels.length - 1; li >= 0; li--){
-    const m = levels[li], inner = li === 0 ? 0 : levels[li - 1];
-    ctx.save(); ctx.beginPath();
-    let started = false, prevY = null;
-    for(let i = vs; i <= ve; i++){
-      const c = ctxAt(i); if(!c){ continue; }
-      const x = X(i - vs), y = Y(c.base * (1 - m * c.sigma));
-      if(!started){ ctx.moveTo(x, y); started = true; }
-      else if(prevY !== null && Math.abs(y - prevY) > 0.5){ ctx.lineTo(x, prevY); ctx.lineTo(x, y); }
-      else ctx.lineTo(x, y);
-      prevY = y;
-    }
-    prevY = null;
-    for(let i = ve; i >= vs; i--){
-      const c = ctxAt(i); if(!c) continue;
-      const x = X(i - vs), y = Y(c.base * (1 - inner * c.sigma));
-      if(prevY !== null && Math.abs(y - prevY) > 0.5){ ctx.lineTo(x, prevY); ctx.lineTo(x, y); }
-      else ctx.lineTo(x, y);
-      prevY = y;
-    }
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(192,57,43,' + (0.045 + li * 0.022) + ')'; ctx.fill(); ctx.restore();
-  }
-  ctx.font = '10.5px ' + FONT;
-  for(const m of levels){
-    stepPath(m);
-    ctx.strokeStyle = 'rgba(192,57,43,' + (m === 1 || m === 2 ? .62 : .3) + ')';
-    ctx.lineWidth = m === 1 ? 1.7 : 1;
-    if(m !== 1 && m !== 2) ctx.setLineDash([3, 3]);
-    ctx.stroke(); ctx.setLineDash([]);
-    const c = ctxAt(ve);
-    if(c){
-      ctx.fillStyle = 'rgba(192,57,43,.8)'; ctx.textAlign = 'left';
-      ctx.fillText('-' + m + 'σ', X(nView - 1) + 3, Y(c.base * (1 - m * c.sigma)) + 3);
-    }
-  }
-  // +1σ 上沿(不填充): 让"本期预期波动范围"是完整的双边
-  ctx.beginPath();
-  {
-    let started = false, prevY = null;
-    for(let i = vs; i <= ve; i++){
-      const c = ctxAt(i); if(!c) continue;
-      const x = X(i - vs), y = Y(c.base * (1 + c.sigma));
-      if(!started){ ctx.moveTo(x, y); started = true; }
-      else if(prevY !== null && Math.abs(y - prevY) > 0.5){ ctx.lineTo(x, prevY); ctx.lineTo(x, y); }
-      else ctx.lineTo(x, y);
-      prevY = y;
-    }
-  }
-  ctx.strokeStyle = 'rgba(31,78,121,.45)'; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
-  ctx.stroke(); ctx.setLineDash([]);
-  {
-    const c = ctxAt(ve);
-    if(c){
-      ctx.fillStyle = 'rgba(31,78,121,.7)'; ctx.textAlign = 'left';
-      ctx.fillText('+1σ', X(nView - 1) + 3, Y(c.base * (1 + c.sigma)) + 3);
-    }
-  }
-
-  // 期初分隔线
-  ctx.strokeStyle = 'rgba(31,78,121,.16)'; ctx.lineWidth = 1;
-  for(let i = vs + 1; i <= ve; i++){
-    if(!D[MODE].first[i]) continue;
-    const x = X(i - vs);
-    ctx.beginPath(); ctx.moveTo(x, PADT); ctx.lineTo(x, H - PADB); ctx.stroke();
   }
 }
 
-/* 高点锚定: 从锚点张开的扇形 */
-function drawFan(vs, ve, nView, X, Y, levels, FONT){
-  const c = ctxAt(ve); if(!c) return;
-  const JA = c.refIdx, IVA = ivAt(JA), dEnd = ve - JA;
-  const at = (d, m) => D.price[JA] * (1 - m * IVA * Math.sqrt(Math.max(d, 0) / 252));
-  for(let li = levels.length - 1; li >= 0; li--){
-    const mo = levels[li], mi = li === 0 ? 0 : levels[li - 1];
-    ctx.beginPath();
-    for(let d = 0; d <= dEnd; d++) ctx.lineTo(X(JA - vs + d), Y(at(d, mo)));
-    for(let d = dEnd; d >= 0; d--) ctx.lineTo(X(JA - vs + d), Y(at(d, mi)));
-    ctx.closePath(); ctx.fillStyle = 'rgba(192,57,43,' + (0.045 + li * 0.018) + ')'; ctx.fill();
+/* ---------- 右侧纵切面: 悬浮那天各层的价 ---------- */
+function drawSlice(d, i){
+  const el = document.getElementById('slice');
+  if(d == null && i == null){ d = HORIZON; }
+  if(d != null){
+    const px = D.price[last()], sg = ivNow() * Math.sqrt(Math.max(d, 0) / 252);
+    let h = '<div class="sh">未来第 ' + d + ' 个交易日</div>' +
+            '<div class="sm">σ(d) = ' + pct(sg) + '　' + (d === 0 ? '今天' : '约 ' + Math.round(d / 5 * 7) + ' 个自然日后') + '</div>' +
+            '<table class="stab">';
+    const rows = [{ lab: '+2σ', p: coneUp(d, 2), c: '#7f9dbb' },
+                  { lab: '+1σ', p: coneUp(d, 1), c: '#5d84a8' },
+                  { lab: '现价', p: px, me: true }];
+    LEVELS.forEach(m => rows.push({ lab: '-' + m + 'σ', p: coneAt(d, m), c: COLORS[m] }));
+    rows.forEach(r => {
+      const gap = r.p / px - 1;
+      h += '<tr' + (r.me ? ' class="me"' : '') + '><td>' +
+           (r.c ? '<span class="lvdot" style="background:' + r.c + '"></span>' : '') + r.lab +
+           '</td><td class="mono">' + fmtP(r.p) + '</td><td class="mono ' +
+           (gap < -0.0001 ? 'neg' : (gap > 0.0001 ? 'pos' : '')) + '">' +
+           (r.me ? '' : pct(gap)) + '</td></tr>';
+    });
+    h += '</table>';
+    el.innerHTML = h;
+    return;
   }
-  ctx.font = '10.5px ' + FONT;
-  for(const m of levels){
-    ctx.beginPath();
-    for(let d = 0; d <= dEnd; d++){
-      const x = X(JA - vs + d), y = Y(at(d, m));
-      if(d === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.strokeStyle = 'rgba(192,57,43,' + (m === 1 || m === 2 ? .6 : .3) + ')';
-    ctx.lineWidth = m === 1 ? 1.7 : 1;
-    if(m !== 1 && m !== 2) ctx.setLineDash([3, 3]);
-    ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = 'rgba(192,57,43,.8)'; ctx.textAlign = 'left';
-    ctx.fillText('-' + m + 'σ', X(nView - 1) + 3, Y(at(dEnd, m)) + 3);
-  }
+  // 悬浮在历史区: 显示那天的实际价与恐慌度
+  const hi60 = Math.max(...D.price.slice(Math.max(0, i - 59), i + 1));
+  el.innerHTML = '<div class="sh">' + fmtD(D.dates[i]) + '</div>' +
+    '<div class="sm">历史走势区</div><table class="stab">' +
+    '<tr class="me"><td>收盘</td><td class="mono">' + fmtP(D.price[i]) + '</td><td></td></tr>' +
+    '<tr><td>当日最低</td><td class="mono">' + (D.low[i] == null ? '—' : fmtP(D.low[i])) + '</td><td></td></tr>' +
+    '<tr><td>ATM IV</td><td class="mono">' + (D.iv[i] == null ? '—' : pct(D.iv[i])) + '</td><td></td></tr>' +
+    '<tr><td>恐慌度</td><td class="mono">' + (D.panic[i] == null ? '—' : D.panic[i].toFixed(2)) + '</td><td></td></tr>' +
+    '<tr><td>距60日高</td><td class="mono neg">' + pct(D.price[i] / hi60 - 1) + '</td><td></td></tr>' +
+    '</table>';
 }
 
 /* ---------- 交互 ---------- */
-chart.addEventListener('mousemove', e => {
+cv.addEventListener('mousemove', e => {
   if(!LAYOUT) return;
   const r = cv.getBoundingClientRect(), mx = e.clientX - r.left;
-  const { X, vs, nView } = LAYOUT;
-  let best = -1, bd = 1e9;
-  for(let k = 0; k < nView; k++){ const d = Math.abs(X(k) - mx); if(d < bd){ bd = d; best = k; } }
-  if(best < 0){ tip.style.display = 'none'; return; }
-  const i = vs + best, c = ctxAt(i);
-  hoverI = i;
-  let h = fmtD(D.dates[i]) + '<br>价 ' + fmtP(D.price[i]);
-  if(c){
-    h += '<br>z = ' + c.z.toFixed(2) + 'σ  (' + bandOf(c.z) + ')';
-    h += '<br>' + (isPeriod() ? '基准 ' : '锚 ') + fmtD(D.dates[c.refIdx]) + ' @ ' + fmtP(c.base);
-    h += '<br>σ ' + pct(c.sigma) + '  距基准 ' + pct(D.price[i] / c.base - 1);
-    h += '<br>-1σ ' + fmtP(c.base * (1 - c.sigma)) + '  -2σ ' + fmtP(c.base * (1 - 2 * c.sigma));
-  } else h += '<br>本期基准未定';
-  if(D.panic[i] != null) h += '<br>恐慌度 ' + D.panic[i].toFixed(2);
-  tip.innerHTML = h; tip.style.display = 'block';
-  const tw = tip.offsetWidth;
-  tip.style.left = Math.min(Math.max(4, mx - tw / 2), chart.clientWidth - tw - 8) + 'px';
-  tip.style.top = '14px';
+  const { X, vs, HIST, total } = LAYOUT;
+  let best = 0, bd = 1e9;
+  for(let k = 0; k < total; k++){ const dd = Math.abs(X(k) - mx); if(dd < bd){ bd = dd; best = k; } }
+  if(best >= HIST){ hoverD = best - HIST; hoverI = null; }
+  else { hoverI = vs + best; hoverD = null; }
+  drawSlice(hoverD, hoverI);
+  resize();
 });
-chart.addEventListener('mouseleave', () => { tip.style.display = 'none'; hoverI = -1; });
-chart.addEventListener('click', () => {
-  if(MODE !== 'A' || ANCHOR !== 'pick' || hoverI < 0) return;
-  pickI = hoverI;
-  document.getElementById('hint').textContent = '锚点 ' + fmtD(D.dates[pickI]) + '（再点可改）';
-  render();
+cv.addEventListener('mouseleave', () => {
+  hoverD = null; hoverI = null; drawSlice(null, null); resize();
 });
 window.addEventListener('resize', () => resize());
+document.getElementById('toggleLegacy').onclick = e => {
+  e.preventDefault();
+  alert('历史分期视图(每周/每月重置带、高点锚定)已移到 scripts/period_cone.py 与 vol_cone_anchored.py，' +
+        '命令行查看。本页聚焦前瞻锥与挂单。');
+};
 
 select();
 </script>
