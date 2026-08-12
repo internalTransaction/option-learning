@@ -61,6 +61,11 @@
   .stab tr.me td{background:var(--brand-soft);font-weight:700;color:var(--brand);}
   .stab tr.me td:first-child{border-left:2px solid var(--brand);}
 
+  .scrub{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:12px;color:var(--ink2);}
+  .scrub input[type=range]{flex:1;accent-color:var(--brand);cursor:pointer;}
+  .scrub button{border:1px solid var(--line);background:var(--card);color:var(--ink2);
+    padding:4px 10px;border-radius:8px;font-size:12px;cursor:pointer;white-space:nowrap;}
+  .scrub button:hover{border-color:var(--brand);color:var(--brand);}
   .note{font-size:12.5px;color:var(--ink2);line-height:1.75;background:var(--card);
     border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-top:16px;}
   .note b{color:var(--ink);}
@@ -110,14 +115,22 @@
     <div class="card">
       <h3 id="lvHead">挂单指引 · 各层价位与历史表现</h3>
       <table id="levels"><thead><tr>
-        <th>层</th><th>挂单价</th><th>距现价</th><th>成交率</th>
-        <th>成交后20日</th><th>胜率</th><th>成交后还要跌</th><th>离真底</th><th>平均等待</th>
+        <th>层</th><th>挂单价</th><th>距顶点</th><th id="thHit">成交率 本/池</th>
+        <th id="thRet">成交后20日 本/池</th><th id="thWin">胜率 本/池</th>
+        <th>成交后还要跌</th><th>离真底</th><th>平均等待</th>
       </tr></thead><tbody></tbody></table>
     </div>
   </div>
 
   <div class="chartrow">
-    <div id="chart"><canvas id="cv"></canvas></div>
+    <div>
+      <div id="chart"><canvas id="cv"></canvas></div>
+      <div class="scrub">
+        <button id="apexToday">回到今天</button>
+        <input type="range" id="apexSlider" min="30" max="100" value="100">
+        <span id="apexLabel">锥顶点：今天</span>
+      </div>
+    </div>
     <div id="slice"></div>
   </div>
 
@@ -136,6 +149,11 @@
     <b>已知局限</b>：σ 归一并未跑赢信号台现有的 mom_pct 闸门，它的价值是给<b>可挂单的价位</b>；
     回测未计成本与冲击，也假设你挂的单一定能在触及时成交。<br>
 
+    <b>把锥拉回历史</b>：拖下方滑杆或在走势上点一下，锥顶点就移到那天，
+    用<b>那天的价和那天的 IV</b> 重画锥，顶点之后的实际走势会压在锥上；
+    表格随之变成"当时在这些价位挂单会怎样"——是否成交、第几天成交、成交后 20 日盈亏与最深浮亏。
+    水平虚线才是真正的委托价（锥在期末那一档，挂上去期内不动），锥体只是概率包络。<br>
+
     模式切换里的「高点锚定」保留在
     <a href="#" id="toggleLegacy" style="color:var(--brand)">历史分期视图</a>，
     那是另一个问题（这轮从高点算走到多深），不用于挂单。
@@ -150,8 +168,9 @@ const LEVELS = META.levels;
 const COLORS = { 0.5:'#e8a598', 1:'#d9705c', 1.5:'#c0392b', 2:'#8e2318' };
 
 let curKey = KEYS[0], D = null, HORIZON = 20, IVMODE = 'atm', USE_PANIC = false;
-let hoverD = null;           // 悬浮在未来第几天(null = 不在锥区)
-let hoverI = null;           // 悬浮在历史第几天
+let APEX = null;             // 锥顶点(null = 今天); 拉回历史某天就画那天画出来的锥
+let hoverD = null;           // 悬浮在锥区未来第几天
+let hoverI = null;           // 悬浮在历史区第几天
 let LAYOUT = null;
 
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
@@ -160,39 +179,62 @@ const chart = document.getElementById('chart');
 function fmtP(v){ return v >= 100 ? v.toFixed(1) : v.toFixed(3); }
 function pct(v, nd){ return (v * 100).toFixed(nd === undefined ? 1 : nd) + '%'; }
 function fmtD(s){ return s.slice(0,4) + '-' + s.slice(4,6) + '-' + s.slice(6,8); }
-function last(){ return D.dates.length - 1; }
-function ivNow(){
-  const i = last();
+function lastI(){ return D.dates.length - 1; }
+function apexI(){ return APEX == null ? lastI() : APEX; }
+function isPast(){ return APEX != null && APEX < lastI(); }
+function ivAt(i){
   return (IVMODE === 'put' && D.iv_put[i] != null) ? D.iv_put[i] : D.iv[i];
 }
-/* 锥在未来第 d 个交易日、第 m 层的价位 */
+/* 锥: 以顶点当天的价与 IV 向后张开 */
 function coneAt(d, m){
-  return D.price[last()] * (1 - m * ivNow() * Math.sqrt(Math.max(d, 0) / 252));
+  const a = apexI();
+  return D.price[a] * (1 - m * ivAt(a) * Math.sqrt(Math.max(d, 0) / 252));
 }
 function coneUp(d, m){
-  return D.price[last()] * (1 + m * ivNow() * Math.sqrt(Math.max(d, 0) / 252));
+  const a = apexI();
+  return D.price[a] * (1 + m * ivAt(a) * Math.sqrt(Math.max(d, 0) / 252));
 }
-/* JSON 键由 Python str(float) 生成("1.0"), JS String(1.0) 得 "1", 必须对齐 */
-function bkey(m){ return m.toFixed(1); }
+/* 实际挂单价 = 锥在展望期末的那一档(回测就是这么挂的, 期内固定不动) */
+function limitPx(m){ return coneAt(HORIZON, m); }
+
+/* 顶点在历史时: 挂在 -mσ 的单后来成交了吗, 第几天, 成交后最低到哪 */
+function hitInfo(m){
+  if(!isPast()) return null;
+  const a = apexI(), lvl = limitPx(m), n = lastI();
+  const end = Math.min(a + HORIZON, n);
+  for(let d = 1; a + d <= end; d++){
+    if(D.low[a + d] != null && D.low[a + d] <= lvl){
+      let after = Infinity;
+      for(let k = a + d; k <= Math.min(a + d + HORIZON, n); k++)
+        if(D.low[k] != null) after = Math.min(after, D.low[k]);
+      const exit = Math.min(a + d + HORIZON, n);
+      return { d, date: D.dates[a + d], lvl,
+               mae: after / lvl - 1, ret: D.price[exit] / lvl - 1, done: a + d + HORIZON <= n };
+    }
+  }
+  const complete = a + HORIZON <= n;
+  return { d: null, lvl, complete };
+}
+
 function btOf(){
   const src = USE_PANIC ? 'bt_panic' : 'bt';
   return { self: D[src], pool: USE_PANIC ? DATA._pooledBtPanic : DATA._pooledBt };
 }
+/* JSON 键由 Python str(float) 生成("1.0"), JS String(1.0) 得 "1", 必须对齐 */
+function bkey(m){ return m.toFixed(1); }
 
 /* ---------- 控件 ---------- */
 const tabs = document.getElementById('tabs');
 KEYS.forEach(k => {
   const b = document.createElement('button');
   b.textContent = DATA[k].name; b.dataset.k = k;
-  b.onclick = () => { curKey = k; select(); };
+  b.onclick = () => { curKey = k; APEX = null; select(); };
   tabs.appendChild(b);
 });
 document.getElementById('hSeg').onclick = e => {
   const b = e.target.closest('button'); if(!b) return;
   HORIZON = +b.dataset.h;
   document.querySelectorAll('#hSeg button').forEach(x => x.classList.toggle('on', x === b));
-  document.getElementById('hint').textContent =
-    HORIZON === META.H ? '' : '（回测口径固定为 1 月，其它展望期只改画图，不改回测数字）';
   render();
 };
 document.getElementById('ivSeg').onclick = e => {
@@ -202,54 +244,92 @@ document.getElementById('ivSeg').onclick = e => {
   render();
 };
 document.getElementById('tgPanic').onchange = e => { USE_PANIC = e.target.checked; render(); };
+document.getElementById('apexSlider').oninput = e => {
+  const v = +e.target.value;
+  APEX = v >= lastI() ? null : v;
+  render();
+};
+document.getElementById('apexToday').onclick = () => {
+  APEX = null; document.getElementById('apexSlider').value = lastI(); render();
+};
 
 function select(){
   D = DATA[curKey];
+  if(APEX != null && APEX > D.dates.length - 1) APEX = null;   // 换标的后旧下标可能越界
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.k === curKey));
   hoverD = null; hoverI = null;
+  const sl = document.getElementById('apexSlider');
+  sl.min = 30; sl.max = lastI(); sl.value = apexI();
   render();
 }
 
 /* ---------- 渲染 ---------- */
 function render(){
-  const i = last(), sg = ivNow() * Math.sqrt(HORIZON / 252);
-  document.getElementById('kPx').textContent = fmtP(D.price[i]);
-  document.getElementById('kDate').textContent = fmtD(D.dates[i]);
-  document.getElementById('kIv').textContent = pct(D.iv[i]);
+  const a = apexI(), sg = ivAt(a) * Math.sqrt(HORIZON / 252);
+  document.getElementById('apexSlider').value = a;
+  document.getElementById('kPx').textContent = fmtP(D.price[a]);
+  document.getElementById('kDate').textContent = fmtD(D.dates[a]) +
+    (isPast() ? '（回看）' : '');
+  document.getElementById('kIv').textContent = pct(D.iv[a]);
   document.getElementById('kSig').textContent = pct(sg);
-  document.getElementById('kPanic').textContent = D.panic[i] == null ? '—' : D.panic[i].toFixed(2);
-  const hi60 = Math.max(...D.price.slice(Math.max(0, i - 59), i + 1));
-  document.getElementById('kDd').textContent = pct(D.price[i] / hi60 - 1);
+  document.getElementById('kPanic').textContent = D.panic[a] == null ? '—' : D.panic[a].toFixed(2);
+  const hi60 = Math.max(...D.price.slice(Math.max(0, a - 59), a + 1));
+  document.getElementById('kDd').textContent = pct(D.price[a] / hi60 - 1);
+  document.getElementById('apexLabel').textContent =
+    isPast() ? '锥顶点 ' + fmtD(D.dates[a]) + '（后 ' + Math.min(HORIZON, lastI() - a) + ' 日已知）'
+             : '锥顶点：今天';
 
   const bt = btOf();
   document.getElementById('lvHead').textContent =
-    '挂单指引 · 各层价位与历史表现' + (USE_PANIC ? '（仅恐慌度≥0.7 的日子）' : '');
+    (isPast() ? '当时挂单会怎样 · ' : '挂单指引 · ') + '各层价位与历史表现' +
+    (USE_PANIC ? '（回测仅恐慌度≥0.7）' : '');
+  document.getElementById('thHit').textContent = isPast() ? '当时是否成交' : '成交率 本/池';
 
   const tb = document.querySelector('#levels tbody'); tb.innerHTML = '';
   LEVELS.forEach(m => {
     const s = bt.self[bkey(m)] || {}, p = bt.pool[bkey(m)] || {};
-    const price = coneAt(HORIZON, m);
-    const gap = price / D.price[i] - 1;
+    const price = limitPx(m), gap = price / D.price[a] - 1;
     const thin = (s.n_fill || 0) < 40;
     const g = (v, f) => v == null ? '—' : f(v);
+    let hitCell;
+    if(isPast()){
+      const h = hitInfo(m);
+      hitCell = h.d
+        ? `<span class="pos">✓ 第${h.d}日</span> <span style="color:var(--muted)">${fmtD(h.date).slice(5)}</span>`
+        : (h.complete ? '<span style="color:var(--muted)">未成交</span>'
+                      : '<span style="color:var(--amber)">窗口未走完</span>');
+    } else {
+      hitCell = `${g(s.fill, v => pct(v, 0))}<span style="color:var(--muted)"> / ${g(p.fill, v => pct(v, 0))}</span>`;
+    }
+    let retCell, winCell;
+    if(isPast()){
+      const h = hitInfo(m);
+      retCell = h.d
+        ? `<span class="${h.ret > 0 ? 'pos' : 'neg'}">${pct(h.ret, 1)}</span>` +
+          (h.done ? '' : '<span style="color:var(--muted)">至今</span>')
+        : '—';
+      winCell = h.d ? `<span class="neg">${pct(h.mae, 1)}</span>` : '—';
+    } else {
+      retCell = `<span class="${(s.ret || 0) > 0 ? 'pos' : ''}"${thin ? ' style="opacity:.55"' : ''}>` +
+        `${g(s.ret, v => pct(v, 1))}<span style="color:var(--muted)"> / ${g(p.ret, v => pct(v, 1))}</span></span>`;
+      winCell = `${g(s.win, v => pct(v, 0))}<span style="color:var(--muted)"> / ${g(p.win, v => pct(v, 0))}</span>`;
+    }
     const tr = document.createElement('tr');
     tr.innerHTML =
       `<td><span class="lvdot" style="background:${COLORS[m]}"></span>-${m}σ</td>` +
       `<td class="mono"><b>${fmtP(price)}</b></td>` +
       `<td class="mono neg">${pct(gap)}</td>` +
-      `<td class="mono">${g(s.fill, v => pct(v, 0))}` +
-        `<span style="color:var(--muted)"> / ${g(p.fill, v => pct(v, 0))}</span></td>` +
-      `<td class="mono ${(s.ret || 0) > 0 ? 'pos' : ''}"${thin ? ' style="opacity:.55"' : ''}>` +
-        `${g(s.ret, v => pct(v, 1))}<span style="color:var(--muted)"> / ${g(p.ret, v => pct(v, 1))}</span></td>` +
-      `<td class="mono"${thin ? ' style="opacity:.55"' : ''}>${g(s.win, v => pct(v, 0))}` +
-        `<span style="color:var(--muted)"> / ${g(p.win, v => pct(v, 0))}</span></td>` +
+      `<td class="mono">${hitCell}</td>` +
+      `<td class="mono">${retCell}</td>` +
+      `<td class="mono">${winCell}</td>` +
       `<td class="mono neg">${g(p.mae, v => pct(v, 1))}</td>` +
       `<td class="mono">${g(p.vs_low, v => '+' + pct(v, 1))}</td>` +
       `<td class="mono">${g(p.wait, v => v.toFixed(0) + '日')}</td>`;
     tb.appendChild(tr);
   });
+  document.getElementById('thRet').textContent = isPast() ? '当时成交后20日' : '成交后20日 本/池';
+  document.getElementById('thWin').textContent = isPast() ? '成交后最深浮亏' : '胜率 本/池';
 
-  // 结论块用池化数字, 随恐慌门切换
   const P = bt.pool, b1 = P['1.0'] || {}, b15 = P['1.5'] || {}, b2 = P['2.0'] || {}, b05 = P['0.5'] || {};
   document.getElementById('verdict').innerHTML =
     `<b>能不能抄到底？不能。</b>${USE_PANIC ? '（恐慌度≥0.7 口径）' : ''}` +
@@ -268,7 +348,7 @@ function render(){
 }
 
 /* ---------- 绘图 ---------- */
-const PADL = 58, PADR = 74, PADT = 14, PADB = 26;
+const PADL = 58, PADR = 78, PADT = 14, PADB = 26;
 function resize(){
   const w = chart.clientWidth - 12, h = 400;
   const dpr = window.devicePixelRatio || 1;
@@ -280,15 +360,17 @@ function resize(){
 
 function draw(W, H){
   ctx.clearRect(0, 0, W, H);
-  const i = last();
-  const HIST = Math.min(i, Math.max(40, HORIZON * 3));   // 左侧历史长度
-  const vs = i - HIST, total = HIST + HORIZON + 1;
+  const a = apexI(), n = lastI();
+  const HIST = Math.min(a, Math.max(40, HORIZON * 3));
+  const vs = a - HIST, total = HIST + HORIZON + 1;
+  const known = Math.min(HORIZON, n - a);          // 顶点之后已知的实际天数
   const FONT = getComputedStyle(document.body).fontFamily;
 
   let lo = Infinity, hi = -Infinity;
-  for(let k = vs; k <= i; k++){
+  for(let k = vs; k <= a + known; k++){
     const p = D.price[k]; if(p == null) continue;
     lo = Math.min(lo, p); hi = Math.max(hi, p);
+    if(D.low[k] != null) lo = Math.min(lo, D.low[k]);
   }
   lo = Math.min(lo, coneAt(HORIZON, LEVELS[LEVELS.length - 1]));
   hi = Math.max(hi, coneUp(HORIZON, 2));
@@ -296,7 +378,7 @@ function draw(W, H){
 
   const X = k => PADL + (W - PADL - PADR) * (k / (total - 1));
   const Y = v => PADT + (H - PADT - PADB) * (1 - (v - lo) / (hi - lo));
-  LAYOUT = { X, Y, vs, i, HIST, total, W, H };
+  LAYOUT = { X, Y, vs, a, HIST, total, W, H, known };
 
   ctx.strokeStyle = '#e3e0d9'; ctx.lineWidth = 1;
   ctx.fillStyle = '#8b8880'; ctx.font = '11px ' + FONT; ctx.textAlign = 'right';
@@ -312,10 +394,11 @@ function draw(W, H){
   }
   for(let d = Math.ceil(HORIZON / 3); d <= HORIZON; d += Math.ceil(HORIZON / 3)){
     ctx.fillStyle = '#b0ada4';
-    ctx.fillText('+' + d + '日', X(HIST + d), H - 8);
+    ctx.fillText((a + d <= n ? D.dates[a + d].slice(4,6) + '-' + D.dates[a + d].slice(6,8)
+                             : '+' + d + '日'), X(HIST + d), H - 8);
   }
 
-  // 锥体: 由外向内填充
+  // 锥体
   for(let li = LEVELS.length - 1; li >= 0; li--){
     const mo = LEVELS[li], mi = li === 0 ? 0 : LEVELS[li - 1];
     ctx.beginPath();
@@ -324,7 +407,6 @@ function draw(W, H){
     ctx.closePath();
     ctx.fillStyle = 'rgba(192,57,43,' + (0.05 + li * 0.03) + ')'; ctx.fill();
   }
-  // 上沿(浅蓝, 只画 1σ/2σ 作对称参考)
   for(const m of [1, 2]){
     ctx.beginPath();
     for(let d = 0; d <= HORIZON; d++){
@@ -334,7 +416,6 @@ function draw(W, H){
     ctx.strokeStyle = 'rgba(31,78,121,' + (m === 1 ? .42 : .25) + ')';
     ctx.lineWidth = 1; ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
   }
-  // 下沿各层实线 + 右侧标签
   ctx.font = '10.5px ' + FONT; ctx.textAlign = 'left';
   for(const m of LEVELS){
     ctx.beginPath();
@@ -344,30 +425,53 @@ function draw(W, H){
     }
     ctx.strokeStyle = COLORS[m]; ctx.lineWidth = m === 1 || m === 2 ? 1.6 : 1;
     ctx.stroke();
+    // 挂单价 = 锥在期末那一档, 期内固定 —— 用水平虚线画出来才是真正的委托价
+    const lp = limitPx(m);
+    ctx.beginPath(); ctx.setLineDash([2, 4]);
+    ctx.moveTo(X(HIST), Y(lp)); ctx.lineTo(X(total - 1), Y(lp));
+    ctx.strokeStyle = COLORS[m]; ctx.lineWidth = 0.9; ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle = COLORS[m];
-    ctx.fillText('-' + m + 'σ ' + fmtP(coneAt(HORIZON, m)), X(total - 1) + 3, Y(coneAt(HORIZON, m)) + 3);
+    ctx.fillText('-' + m + 'σ ' + fmtP(lp), X(total - 1) + 3, Y(lp) + 3);
   }
   ctx.fillStyle = 'rgba(31,78,121,.6)';
   ctx.fillText('+1σ ' + fmtP(coneUp(HORIZON, 1)), X(total - 1) + 3, Y(coneUp(HORIZON, 1)) + 3);
 
-  // 今天的分隔线
   ctx.strokeStyle = '#c9c5bc'; ctx.setLineDash([2, 3]);
   ctx.beginPath(); ctx.moveTo(X(HIST), PADT); ctx.lineTo(X(HIST), H - PADB); ctx.stroke();
   ctx.setLineDash([]);
 
-  // 历史价格线
+  // 顶点之前的历史
   ctx.beginPath(); let st = false;
-  for(let k = vs; k <= i; k++){
+  for(let k = vs; k <= a; k++){
     const p = D.price[k]; if(p == null){ st = false; continue; }
     const x = X(k - vs), y = Y(p);
     if(!st){ ctx.moveTo(x, y); st = true; } else ctx.lineTo(x, y);
   }
   ctx.strokeStyle = '#1f4e79'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
 
-  ctx.beginPath(); ctx.arc(X(HIST), Y(D.price[i]), 4.5, 0, 7);
-  ctx.fillStyle = '#1f4e79'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+  // 顶点之后的实际走势(拉回历史时才有) —— 直接压在锥上做验证
+  if(known > 0){
+    ctx.beginPath();
+    for(let d = 0; d <= known; d++){
+      const x = X(HIST + d), y = Y(D.price[a + d]);
+      if(d === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = '#0f2f4d'; ctx.lineWidth = 2.2; ctx.stroke();
+    // 成交点
+    for(const m of LEVELS){
+      const h = hitInfo(m);
+      if(h && h.d && h.d <= known){
+        ctx.beginPath(); ctx.arc(X(HIST + h.d), Y(h.lvl), 4, 0, 7);
+        ctx.fillStyle = COLORS[m]; ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.4; ctx.stroke();
+      }
+    }
+  }
 
-  // 悬浮竖线
+  ctx.beginPath(); ctx.arc(X(HIST), Y(D.price[a]), 4.5, 0, 7);
+  ctx.fillStyle = isPast() ? '#bf7d16' : '#1f4e79'; ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+
   const hx = hoverD != null ? X(HIST + hoverD) : (hoverI != null ? X(hoverI - vs) : null);
   if(hx != null){
     ctx.strokeStyle = 'rgba(29,28,26,.3)'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
@@ -382,18 +486,20 @@ function draw(W, H){
   }
 }
 
-/* ---------- 右侧纵切面: 悬浮那天各层的价 ---------- */
+/* ---------- 右侧纵切面 ---------- */
 function drawSlice(d, i){
   const el = document.getElementById('slice');
-  if(d == null && i == null){ d = HORIZON; }
+  const a = apexI(), n = lastI();
+  if(d == null && i == null) d = HORIZON;
   if(d != null){
-    const px = D.price[last()], sg = ivNow() * Math.sqrt(Math.max(d, 0) / 252);
-    let h = '<div class="sh">未来第 ' + d + ' 个交易日</div>' +
-            '<div class="sm">σ(d) = ' + pct(sg) + '　' + (d === 0 ? '今天' : '约 ' + Math.round(d / 5 * 7) + ' 个自然日后') + '</div>' +
+    const px = D.price[a], sg = ivAt(a) * Math.sqrt(Math.max(d, 0) / 252);
+    const real = a + d <= n ? D.price[a + d] : null;
+    let h = '<div class="sh">' + (a + d <= n ? fmtD(D.dates[a + d]) : '未来第 ' + d + ' 日') + '</div>' +
+            '<div class="sm">顶点后第 ' + d + ' 个交易日　σ(d) = ' + pct(sg) + '</div>' +
             '<table class="stab">';
     const rows = [{ lab: '+2σ', p: coneUp(d, 2), c: '#7f9dbb' },
                   { lab: '+1σ', p: coneUp(d, 1), c: '#5d84a8' },
-                  { lab: '现价', p: px, me: true }];
+                  { lab: d === 0 ? '顶点价' : '顶点价', p: px, me: true }];
     LEVELS.forEach(m => rows.push({ lab: '-' + m + 'σ', p: coneAt(d, m), c: COLORS[m] }));
     rows.forEach(r => {
       const gap = r.p / px - 1;
@@ -404,13 +510,17 @@ function drawSlice(d, i){
            (r.me ? '' : pct(gap)) + '</td></tr>';
     });
     h += '</table>';
+    if(real != null){
+      const zz = (real / px - 1) / sg;
+      h += '<div class="sm" style="margin-top:9px">实际走到 <b style="color:var(--ink)">' +
+           fmtP(real) + '</b>　' + pct(real / px - 1) + '<br>相当于 ' + zz.toFixed(2) + 'σ</div>';
+    }
     el.innerHTML = h;
     return;
   }
-  // 悬浮在历史区: 显示那天的实际价与恐慌度
   const hi60 = Math.max(...D.price.slice(Math.max(0, i - 59), i + 1));
   el.innerHTML = '<div class="sh">' + fmtD(D.dates[i]) + '</div>' +
-    '<div class="sm">历史走势区</div><table class="stab">' +
+    '<div class="sm">历史走势区 · 点一下把锥顶点移到这天</div><table class="stab">' +
     '<tr class="me"><td>收盘</td><td class="mono">' + fmtP(D.price[i]) + '</td><td></td></tr>' +
     '<tr><td>当日最低</td><td class="mono">' + (D.low[i] == null ? '—' : fmtP(D.low[i])) + '</td><td></td></tr>' +
     '<tr><td>ATM IV</td><td class="mono">' + (D.iv[i] == null ? '—' : pct(D.iv[i])) + '</td><td></td></tr>' +
@@ -434,12 +544,13 @@ cv.addEventListener('mousemove', e => {
 cv.addEventListener('mouseleave', () => {
   hoverD = null; hoverI = null; drawSlice(null, null); resize();
 });
+cv.addEventListener('click', () => {
+  if(hoverI == null || hoverI < 30) return;
+  APEX = hoverI >= lastI() ? null : hoverI;
+  hoverI = null; hoverD = null;
+  render();
+});
 window.addEventListener('resize', () => resize());
-document.getElementById('toggleLegacy').onclick = e => {
-  e.preventDefault();
-  alert('历史分期视图(每周/每月重置带、高点锚定)已移到 scripts/period_cone.py 与 vol_cone_anchored.py，' +
-        '命令行查看。本页聚焦前瞻锥与挂单。');
-};
 
 select();
 </script>
