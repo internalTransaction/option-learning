@@ -47,6 +47,7 @@
   .action .odds{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:2px;}
   .action.act-buy{background:var(--red-bg);border-color:var(--red);} .action.act-buy .tag{color:var(--red);}
   .action.act-trim{background:rgba(124,58,173,.08);border-color:#7c3aad;} .action.act-trim .tag{color:#7c3aad;}
+  .action.act-wait{background:rgba(211,84,0,.09);border-color:#d35400;} .action.act-wait .tag{color:#d35400;}
   .action.act-insure{background:var(--brand-soft);border-color:var(--brand);} .action.act-insure .tag{color:var(--brand);}
   .action.act-hold{background:var(--card2);} .action.act-hold .tag{color:var(--ink2);}
   .readout{display:flex;flex-wrap:wrap;gap:6px 8px;margin:2px 0 16px;}
@@ -108,6 +109,8 @@
     <span class="rseg" id="rangeSeg">
       <button data-r="924" class="on">924以来</button><button data-r="all">全部</button>
     </span>
+    <span>副图</span>
+    <span class="rseg" id="subSeg"><button data-s="pct" class="on">分位</button><button data-s="raw">原始值</button></span>
     <label><input type="checkbox" id="tgBand" checked> 触发带（灯+动态跌幅/过热）</label>
     <span style="color:var(--muted)">鼠标移动查看逐日数值 · 触屏可拖动</span>
   </div>
@@ -131,6 +134,7 @@
       <span class="band-note"><i style="background:rgba(124,58,173,.20);border:1px solid #7c3aad"></i>紫·melt-up过热 <b>降仓警示·非做空</b></span>
     </div>
     <b>vol-of-vol(VVIX 思路)</b>：A股无 VIX 期权、算不出真 VVIX，故用两个代理——<b>蝶式凸度</b>=(IV<sub>25Δc</sub>+IV<sub>25Δp</sub>)/2−ATM IV(市场为大波动/尾部付的溢价)与<b>已实现 vol-of-vol</b>=RV20 对数变化的 20 日波动(只用价格、最正交)。实测(IV≥0.75分位的跌到位日 n=257)：<b>IV 高且凸度高</b>=真恐慌，胜率 65.6%/均值 +3.7%；<b>IV 高但凸度低</b>=假恐慌，胜率仅 49.2%/均值 +1.7%。这解释了为何"高IV"单独几乎无预测力(IC +0.03)——里面混了一半假恐慌。两者<b>单独用无效</b>(IC 仅 0.05~0.09)，只作抄底的质量过滤。样本偏 924 后、n 有限，谨慎看待。<br>
+    <b>隐含相关性(A股版 COR1M)</b>：CBOE 的 COR1M 需要成分股期权 IV，A股无个股期权，故做<b>半隐含</b>版——分子用中证1000期权 ATM IV、分母用成分股已实现波动率，同式全用已实现的作对照。<b>只有中证1000有</b>(需 1000 只成分股日线)。关键：它的<b>符号随恐慌度翻转</b>，不是一盏可以加进五灯的灯。已跌到位(动量分位≤.30)的 245 天里按恐慌度分层，20日前瞻：恐慌度&lt;0.5 时高相关 <b>−3.18%、胜率仅 19%</b>(n=42) vs 低相关 +1.29%/54%；恐慌度≥0.7 时高相关 +4.60%/80% vs 低相关 +2.10%/81%。<b>稳健的是警告侧</b>(齐跌但期权不慌＝阴跌未出清)；加仓侧在 63 日口径下胜率已无差别、只剩均值差，故只作弱标注。绝对值无意义(分子隐含分母已实现、含 VRP 污染，曾算出 &gt;1 的非法值)，<b>只看时序分位</b>。样本 2022-08 起(MO 期权上市)、警告格仅 42 天，谨慎看待。<br>
     <b>GEX 强化(K=0.4)</b>：dealer gamma 敞口作仓位调节——低 GEX(空 gamma·波动放大·剧烈 capitulation)抄底加成、高 GEX(温吞恐慌)压制。与现有因子几乎正交(|r|&lt;0.3)，是独立增量：接入后中小盘夏普 +0.1~0.17、回撤不增(沪深300 无感)。GEX 只作 regime 择时，A股无 pin/价格点位效应。<br>
     <b>抄底触发＝灯数＋动态跌幅双条件</b>。跌幅闸门已从 hardcode −5/−8/−10% 换成<b>20日动量的1年滚动分位</b>（≤.15/.08/.04＝"跌得比过去约85%/92%/96%的时候都狠"），自适应波动环境、不同标的可比，且修掉了沪深300全样本的不稳。只有灯亮不够、需同时跌到位才着色，"正常态"大部分时间不触发。<br>
     <b>紫色 melt-up 过热区</b>（高位＋IV分位≥.75＋VRP分位≥.75）：实证显示这不是逃顶做空信号（其后20日科创/创业板平均仍 +9~11%），仅作<b>过热降仓/收紧止盈</b>提示——波动率是情绪强度、方向仍看价格动量。<br>
@@ -149,15 +153,17 @@ const DATA = /*__TIMING_DATA__*/;
 const PANELS = [
   {key:'price', title:'标的价格', h:200, color:'#1f4e79', fill:true, nd:v=>fmtPrice(v), main:true},
   // 副图统一画"滚动百分位"(0~1), 点线为 0.90/0.10 极值阈值; dir 标注该指标的恐慌极值方向
-  {key:'iv_pct',    raw:'atm_iv', title:'ATM IV · 分位',  tag:'≥90 恐慌买保护',   h:98, color:'#8e44ad', pctMode:true, dir:'high'},
-  {key:'sent_pct',  raw:'sent',   title:'情绪比 · 分位',   tag:'≥90 抢认沽',       h:98, color:'#c0392b', pctMode:true, dir:'high'},
-  {key:'rr_pct',    raw:'rr',     title:'RR·25Δ · 分位',   tag:'≤10 下跌偏斜极端',  h:94, color:'#16847e', pctMode:true, dir:'low'},
-  {key:'slope_pct', raw:'slope',  title:'微笑斜率 · 分位', tag:'≤10 尾部恐惧',      h:94, color:'#bf7d16', pctMode:true, dir:'low'},
-  {key:'vrp_pct',   raw:'vrp',    title:'VRP · 分位',      tag:'≤10 capitulation', h:94, color:'#2e7d46', pctMode:true, dir:'low'},
-  {key:'pcr_pct',   raw:'pcr',    title:'PCR · 分位',      tag:'辅助·不计灯',       h:90, color:'#5d6d7e', pctMode:true, dir:null},
+  {key:'iv_pct',    raw:'atm_iv', title:'ATM IV',  tag:'≥90分位 恐慌买保护',   h:98, color:'#8e44ad', pctMode:true, dir:'high', rf:v=>(v*100).toFixed(1)+'%'},
+  {key:'sent_pct',  raw:'sent',   title:'情绪比',   tag:'≥90分位 抢认沽',       h:98, color:'#c0392b', pctMode:true, dir:'high', rf:v=>v.toFixed(3), rref:{y:1,lab:'1.0'}},
+  {key:'rr_pct',    raw:'rr',     title:'RR·25Δ',   tag:'≤10分位 下跌偏斜极端',  h:94, color:'#16847e', pctMode:true, dir:'low',  rf:v=>v.toFixed(4), rref:{y:0,lab:'0'}},
+  {key:'slope_pct', raw:'slope',  title:'微笑斜率', tag:'≤10分位 尾部恐惧',      h:94, color:'#bf7d16', pctMode:true, dir:'low',  rf:v=>v.toFixed(3), rref:{y:0,lab:'0'}},
+  {key:'vrp_pct',   raw:'vrp',    title:'VRP',      tag:'≤10分位 capitulation', h:94, color:'#2e7d46', pctMode:true, dir:'low',  rf:v=>v.toFixed(3), rref:{y:0,lab:'0'}},
+  {key:'pcr_pct',   raw:'pcr',    title:'PCR',      tag:'辅助·不计灯',       h:90, color:'#5d6d7e', pctMode:true, dir:null, rf:v=>v.toFixed(3), rref:{y:1,lab:'1.0'}},
   // vol-of-vol 代理(VVIX思路): 高IV 若无 vol-of-vol 配合 = 假恐慌(实测胜率 49% vs 66%)
-  {key:'bf_pct',    raw:'bf',     title:'蝶式凸度 · 分位',  tag:'高=为大波动付溢价',  h:92, color:'#0e7c7b', pctMode:true, dir:null},
-  {key:'rvvol_pct', raw:'rvvol',  title:'已实现vol-of-vol · 分位', tag:'波动率自身的波动', h:92, color:'#a0522d', pctMode:true, dir:null},
+  {key:'bf_pct',    raw:'bf',     title:'蝶式凸度',  tag:'高=为大波动付溢价',  h:92, color:'#0e7c7b', pctMode:true, dir:null, rf:v=>v.toFixed(4), rref:{y:0,lab:'0'}},
+  {key:'rvvol_pct', raw:'rvvol',  title:'已实现vol-of-vol', tag:'波动率自身的波动', h:92, color:'#a0522d', pctMode:true, dir:null, rf:v=>v.toFixed(2)},
+  // 半隐含相关性(A股版 COR1M 代理): 符号随恐慌度翻转, 不计灯 —— 低panic时高相关=阴跌未出清
+  {key:'corr_semi_pct', raw:'corr_semi', title:'隐含相关性', tag:'低panic时高=阴跌未出清', h:92, color:'#7048a8', pctMode:true, dir:null, rf:v=>v.toFixed(3)},
   // GEX 标准分(dealer gamma敞口): 负=空gamma·波动放大·利抄底 → 放大仓位
   {key:'gex_z', title:'GEX · 标准分', tag:'负=波动放大·抄底加成', h:92, color:'#b5651d', nd:v=>v.toFixed(2), refs:[{y:0,lab:'0'}], lastB:true},
 ];
@@ -175,6 +181,8 @@ const CHIPS = [
   {key:'gex_z',lab:'GEX',c:'#b5651d',f:v=>v.toFixed(2)},
   {key:'bf',lab:'蝶式',c:'#0e7c7b',f:v=>v.toFixed(4),p:'bf_pct'},
   {key:'rvvol',lab:'实现vov',c:'#a0522d',f:v=>v.toFixed(3),p:'rvvol_pct'},
+  {key:'corr_semi',lab:'隐含相关',c:'#7048a8',f:v=>v.toFixed(3),p:'corr_semi_pct'},
+  {key:'corr_rv',lab:'已实现相关',c:'#9b8bc4',f:v=>v.toFixed(3),p:'corr_rv_pct'},
 ];
 
 function fmtPrice(v){ return v>=100 ? v.toFixed(1) : v.toFixed(3); }
@@ -184,11 +192,14 @@ function fmtDate(s){ return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8); }
 /* ---------------- state ---------------- */
 let CUR=null, LAYOUT=null, DPR=Math.max(1,window.devicePixelRatio||1);
 let hoverI=-1, showBand=true;
-let curKey=null, RANGE='924';
+let curKey=null, RANGE='924', SUBMODE='pct';
+/* 副图取哪条序列: 分位模式用 p.key, 原始值模式用 p.raw */
+function dkey(p){ return (SUBMODE==='raw' && p.raw) ? p.raw : p.key; }
+function isPctY(p){ return (p.pctMode && SUBMODE==='pct') || p.weightMode; }
 const START='20240924';   // 924 行情起点
 const SLICE_KEYS=['dates','price','dd20','mom20','mom_pct','atm_iv','iv_pct','sent','sent_pct','rr','rr_pct',
   'slope','slope_pct','vrp','vrp_pct','rv','pcr','pcr_pct','gex_z',
-  'bf','bf_pct','rvvol','rvvol_pct'];
+  'bf','bf_pct','rvvol','rvvol_pct','corr_semi','corr_semi_pct','corr_rv','corr_rv_pct'];
 
 function sliceByStart(src){
   // 百分位为滚动1年窗口, 已含起点前的历史, 截断后仍有效
@@ -215,6 +226,12 @@ Object.keys(DATA).forEach((k,i)=>{
 });
 
 document.getElementById('tgBand').onchange=e=>{ showBand=e.target.checked; render(); };
+document.getElementById('subSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  SUBMODE=b.dataset.s;
+  document.querySelectorAll('#subSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  resize(); onLeave();
+});
 
 function totalH(){ return PANELS.reduce((a,p)=>a+p.h,0) + GAP*(PANELS.length-1) + PADT + PADB + DATEH; }
 
@@ -268,6 +285,7 @@ const GEXK=0.4, GEXLO=0.4, GEXHI=1.5;                 // GEX 仓位调节: 低GE
 function clamp(x,a,b){ return Math.max(a,Math.min(b,x)); }
 function computeWeight(d, hot){
   const n=d.dates.length, w=new Array(n).fill(0), buyA=new Array(n).fill(0);
+  const panicA=new Array(n).fill(null);
   let prev=0, pk=null;
   for(let i=0;i<n;i++){
     const mp=d.mom_pct[i], px=d.price[i];
@@ -277,6 +295,7 @@ function computeWeight(d, hot){
     }
     if(!parts.length||mp==null){ w[i]=prev; continue; }
     const panic=parts.reduce((a,b)=>a+b,0)/parts.length;
+    panicA[i]=panic;
     const gate=clamp((0.30-mp)/0.30,0,1);
     let buy=panic*gate;
     const gz = d.gex_z ? d.gex_z[i] : null;
@@ -295,7 +314,7 @@ function computeWeight(d, hot){
     }
     w[i]=clamp(wi,0,1); prev=w[i];
   }
-  return {w, buy:buyA};
+  return {w, buy:buyA, panic:panicA};
 }
 /* 该信号在当日是否点亮(用于tooltip逐项标注) */
 function litFlags(i){
@@ -312,7 +331,7 @@ function select(k){
   curKey=k;
   CUR=sliceByStart(DATA[k]);
   const bb=computeBand(CUR); CUR.lights=bb.lights; CUR.tier=bb.tier; CUR.hot=bb.hot;
-  const ww=computeWeight(CUR, bb.hot); CUR.weight=ww.w; CUR.buy=ww.buy;
+  const ww=computeWeight(CUR, bb.hot); CUR.weight=ww.w; CUR.buy=ww.buy; CUR.panic=ww.panic;
   document.getElementById('curname').textContent=CUR.name;
   buildReadout();
   resize();
@@ -359,7 +378,7 @@ function computeLayout(W,H){
   const n=CUR.dates.length;
   let y=PADT; const panels=[];
   for(const p of PANELS){
-    const ext = (p.pctMode||p.weightMode) ? [-0.04, 1.08] : niceExtent(CUR[p.key]);
+    const ext = isPctY(p) ? [-0.04, 1.08] : niceExtent(CUR[dkey(p)]);
     panels.push({...p, top:y, plotH:p.h, ext});
     y+=p.h+GAP;
   }
@@ -398,21 +417,23 @@ function render(){
     bctx.strokeStyle='#efece5'; bctx.lineWidth=1;
     bctx.strokeRect(PADL, p.top, plotW, p.plotH);
     // title (+ 极值方向小字), 白色衬底避免被阈值点线横穿
+    const ttl = p.pctMode ? p.title+(SUBMODE==='pct'?' · 分位':' · 原始值') : p.title;
     bctx.font='600 12px -apple-system,PingFang SC,sans-serif';
-    const ttlW=bctx.measureText(p.title).width;
+    const ttlW=bctx.measureText(ttl).width;
     let tagW=0; if(p.tag){ bctx.font='10.5px -apple-system,PingFang SC,sans-serif'; tagW=bctx.measureText('· '+p.tag).width+6; }
     bctx.fillStyle='rgba(255,255,255,.82)';
     bctx.fillRect(PADL+4, p.top+3, ttlW+tagW+8, 15);
     bctx.fillStyle='#54524c'; bctx.font='600 12px -apple-system,PingFang SC,sans-serif';
     bctx.textAlign='left'; bctx.textBaseline='top';
-    bctx.fillText(p.title, PADL+7, p.top+5);
+    bctx.fillText(ttl, PADL+7, p.top+5);
     if(p.tag){
       bctx.fillStyle='#b0ab9f'; bctx.font='10.5px -apple-system,PingFang SC,sans-serif';
       bctx.fillText('· '+p.tag, PADL+7+ttlW+6, p.top+6);
     }
     // y ticks + reference lines
     drawYTicks(p);
-    if(p.pctMode) drawPctRefs(p);
+    if(p.pctMode && SUBMODE==='pct') drawPctRefs(p);
+    else if(p.pctMode && p.rref) drawRef(p,p.rref);       // 原始值模式: 中性线(1.0 或 0)
     else if(p.weightMode) drawWeightRefs(p);
     else if(p.refs) for(const r of p.refs){ drawRef(p,r); }
     // series line
@@ -441,13 +462,13 @@ function drawYearGrid(){
 }
 
 function drawYTicks(p){
-  const pctY = p.pctMode||p.weightMode;
+  const pctY = isPctY(p);
   const vals = pctY ? [1,0.5,0] : [p.ext[1],(p.ext[0]+p.ext[1])/2,p.ext[0]];
   bctx.textAlign='right'; bctx.textBaseline='middle';
   bctx.font='10.5px "SF Mono",Menlo,monospace'; bctx.fillStyle='#a7a399';
   for(const v of vals){
     const y=yOf(p,v);
-    const lab = pctY ? (v*100)+'%' : (p.nd?p.nd(v):v.toFixed(2));
+    const lab = pctY ? (v*100)+'%' : (p.rf?p.rf(v):(p.nd?p.nd(v):v.toFixed(2)));
     bctx.fillText(lab, PADL-6, y);
     bctx.strokeStyle='#f2efe8'; bctx.lineWidth=1; bctx.setLineDash([]);
     bctx.beginPath(); bctx.moveTo(PADL,y); bctx.lineTo(PADL+LAYOUT.plotW,y); bctx.stroke();
@@ -495,7 +516,7 @@ function drawRef(p,r){
 }
 
 function drawSeries(p){
-  const arr=CUR[p.key], n=LAYOUT.n;
+  const arr=CUR[dkey(p)], n=LAYOUT.n;
   // 面积填充: 主图(蓝) 或 建议仓位(绿, 填到 y=0 处)
   if(p.fill || p.weightMode){
     const base = p.weightMode ? yOf(p,0) : p.top+p.plotH;
@@ -520,8 +541,8 @@ function drawSeries(p){
   bctx.strokeStyle=p.color; bctx.lineWidth=p.main?1.6:(p.weightMode?1.6:1.3);
   bctx.lineJoin='round'; bctx.stroke();
 
-  // 副图: 标出穿越极值阈值(该指标触发方向)的点
-  if(p.pctMode && p.dir){
+  // 副图: 标出穿越极值阈值(该指标触发方向)的点 — 仅分位模式
+  if(p.pctMode && SUBMODE==='pct' && p.dir){
     bctx.fillStyle='#c0392b';
     for(let i=0;i<n;i++){ const v=arr[i]; if(v==null)continue;
       const hit = p.dir==='high' ? v>=HI : v<=LO;
@@ -558,12 +579,12 @@ function drawCross(i){
   octx.setLineDash([]);
   // per-panel marker dot + value pill
   for(const p of panels){
-    const v=CUR[p.key][i]; if(v==null)continue;
+    const v=CUR[dkey(p)][i]; if(v==null)continue;
     const y=yOf(p,v);
     octx.beginPath(); octx.arc(x,y,3.2,0,7); octx.fillStyle=p.color;
     octx.fill(); octx.strokeStyle='#fff'; octx.lineWidth=1.4; octx.stroke();
     // value label on right axis
-    const txt = (p.pctMode||p.weightMode) ? (v*100).toFixed(0)+'%' : p.nd(v);
+    const txt = isPctY(p) ? (v*100).toFixed(0)+'%' : (p.rf?p.rf(v):p.nd(v));
     octx.font='600 10.5px "SF Mono",monospace';
     const tw=octx.measureText(txt).width;
     const lx=PADL+LAYOUT.plotW+2;
@@ -596,6 +617,11 @@ function actionAt(i){
         : ` · <b>⚠️ 疑似假恐慌</b>：IV 分位 ${pp(iv)} 高但蝶式凸度仅 ${pp(bf)} —— 背离时历史胜率仅 ~49%(vs 齐飙 66%)`;
       if(rv!=null) q += `,已实现vol-of-vol 分位 ${pp(rv)}`;
     }
+    // 隐含相关性: 恐慌已高时它只是弱确认(63日口径下均值 +4.6% vs +2.1%, 但胜率 80/81% 无差别)
+    const cs=CUR.corr_semi_pct?.[i];
+    if(cs!=null) q += cs>=0.5
+      ? ` · 齐跌出清确认：隐含相关分位 ${pp(cs)}(弱证据,仅均值有差、胜率无差)`
+      : ` · 隐含相关分位仅 ${pp(cs)}：跌得分散、非集中出清`;
     return {cls:'act-buy', ico:'🟢', tag:'抄底 / 买 call 加仓',
       why:`恐慌灯 ${k} 盏 + 已跌到位(动量分位 ${pp(mp)}) → 极值反转窗口。这是期权买方的主场：IV 即将见顶回落、方向与 vega 都顺。${q}`,
       odds:'恐慌抄底历史胜率 ~63-77% · 低GEX时更强 · vol-of-vol 背离需降级'};
@@ -603,6 +629,12 @@ function actionAt(i){
   if(hot) return {cls:'act-trim', ico:'🟣', tag:'过热 · 减仓 / 收紧止盈',
     why:`melt-up 过热(动量≥85 · IV≥75 · VRP≥75)。<b>别买 put 对冲</b>——高 IV 三杀(方向错+买贵+IV回落),过热买put历史均值 −36~−55%。降敞口最实在。`,
     odds:'对冲科创下行: 做空中证1000(IM) 或 直接减仓'};
+  // 阴跌未出清: 已跌 + 齐跌(相关性高) + 但期权市场不慌 → 历史最差格子, 推迟抄底
+  const cs=CUR.corr_semi_pct?.[i], pan=CUR.panic?.[i];
+  if(mp!=null&&mp<=0.30&&pan!=null&&pan<0.5&&cs!=null&&cs>=0.5)
+    return {cls:'act-wait', ico:'🟠', tag:'阴跌未出清 · 推迟抄底',
+      why:`已跌到位(动量分位 ${pp(mp)}) 且<b>齐跌</b>(隐含相关分位 ${pp(cs)}),但期权市场<b>没恐慌</b>(恐慌度 ${pp(pan)})。没人认输 = 还没出清,这是历史上最差的格子。等恐慌度起来再动。`,
+      odds:'低恐慌×高相关(n=42): 20日 −3.18%、胜率仅 19% · 对照高相关但恐慌已起: +4.60%/80%'};
   if(iv!=null&&iv<=0.25) return {cls:'act-insure', ico:'🔵', tag:'低波 · 可布局 2 周 put 保险',
     why:`IV 分位 ${pp(iv)}(平静、保险便宜)。天晴时买伞:优先<b>创业板 / 沪深300</b> 的近月 ATM put,持约 2 周。`,
     odds:'低IV买put(2周)历史: 创业板 +15.6% / 沪深300 打平 / 赔率≈盈亏平衡'};

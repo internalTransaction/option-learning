@@ -14,6 +14,11 @@
     2. 重建曲面 parquet(data/processed/surface_<key>_<start>_<end>.parquet)
        ── 注: build_surface.py 目前只重建打印、不落盘; 落盘步骤在 notebook/手动。
        只有原始数据更新到更晚日期时才需要重跑上游; 平时刷新报告直接跑本脚本即可。
+    3. 隐含相关性(可选, 目前仅中证1000):
+         python -m scripts.fetch_constituents --start 20220801 --end <最新>
+         python -m scripts.build_implied_corr --window 21
+       产出 implied_corr_zz1000_21d.parquet, build_timing_viz 会自动并入;
+       缺失时相关性副图/读数留空, 不影响其余管线。
 """
 from __future__ import annotations
 import subprocess

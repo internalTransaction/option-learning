@@ -11,6 +11,8 @@
   vrp        方差风险溢价 = atm_iv - rv20
   rv         20 日已实现波动率(年化)
   pcr        认沽认购成交量比
+  corr_semi  半隐含相关性 = (IV_idx² − Σw²σ²)/((Σwσ)² − Σw²σ²), A股版 COR1M 代理
+  corr_rv    同式全用已实现波动率, 真实齐涨齐跌程度
 每个副图指标同时给出滚动百分位, 用于标注极值带。
 """
 from __future__ import annotations
@@ -131,9 +133,25 @@ def main() -> None:
             rec["gex_z"] = [round(gz[d], 3) if gz.get(d) is not None else None for d in rec["dates"]]
         else:
             rec["gex_z"] = [None] * len(rec["dates"])
+        # 并入隐含相关性(A股版 COR1M 代理)。分位在原始连续序列上算完再对齐,
+        # 避免 reindex 产生的 NaN 空洞污染滚动窗口。目前只有中证1000有(需成分股数据)。
+        corrf = PROC / f"implied_corr_{key}_21d.parquet"
+        n = len(rec["dates"])
+        if corrf.exists():
+            C = pd.read_parquet(corrf).sort_values("trade_date")
+            for col in ("corr_semi", "corr_rv"):
+                C[col + "_pct"] = roll_pct(C[col])
+            C = C.set_index("trade_date")
+            for col in ("corr_semi", "corr_rv", "corr_semi_pct", "corr_rv_pct"):
+                rec[col] = clean(C[col].reindex(rec["dates"]), 3)
+        else:
+            for col in ("corr_semi", "corr_rv", "corr_semi_pct", "corr_rv_pct"):
+                rec[col] = [None] * n
+
         out[key] = rec
         print(f"{key:7s} {name:8s} {len(rec['dates'])} 天  "
-              f"{rec['dates'][0]}->{rec['dates'][-1]}  ({found.path.name})")
+              f"{rec['dates'][0]}->{rec['dates'][-1]}  ({found.path.name})"
+              f"{'  +corr' if corrf.exists() else ''}")
 
     dest = PROC / "timing_viz.json"
     dest.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
