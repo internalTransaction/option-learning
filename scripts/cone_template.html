@@ -1,0 +1,469 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A股期权 · 波动概率锥</title>
+<style>
+  :root{
+    --bg:#faf9f7; --card:#fff; --card2:#f5f3ef; --ink:#1d1c1a; --ink2:#4a4844;
+    --muted:#8b8880; --line:#e3e0d9; --brand:#1f4e79; --brand-soft:#e8eff6;
+    --red:#c0392b; --red-bg:rgba(192,57,43,.08); --green:#2e7d46; --amber:#bf7d16;
+    --r:10px; --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;}
+  .wrap{max-width:1120px;margin:0 auto;padding:22px 20px 60px;}
+  .eyebrow{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+    font-style:italic;margin-bottom:4px;}
+  h1{font-size:23px;font-weight:700;margin:0 0 4px;letter-spacing:-.01em;}
+  .sub{font-size:13px;color:var(--ink2);}
+  .head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px;}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;}
+  .tabs button{border:1px solid var(--line);background:var(--card);color:var(--ink2);
+    padding:7px 14px;border-radius:var(--r);font-size:13.5px;cursor:pointer;transition:.12s;}
+  .tabs button:hover{border-color:var(--brand);}
+  .tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand);font-weight:600;}
+
+  .bar{display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:12.5px;
+    color:var(--ink2);margin-bottom:14px;}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;}
+  .seg button{border:0;background:var(--card);color:var(--ink2);padding:5px 12px;
+    font-size:12.5px;cursor:pointer;}
+  .seg button.on{background:var(--brand);color:#fff;font-weight:600;}
+  label.ck{display:inline-flex;align-items:center;gap:5px;cursor:pointer;}
+
+  .hero{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1.6fr);gap:14px;margin-bottom:16px;}
+  @media(max-width:860px){.hero{grid-template-columns:1fr;}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;}
+  .card h3{margin:0 0 10px;font-size:12.5px;font-weight:600;color:var(--muted);
+    letter-spacing:.04em;text-transform:uppercase;}
+
+  .zbig{display:flex;align-items:baseline;gap:10px;margin:2px 0 8px;}
+  .zbig .v{font-family:var(--mono);font-size:40px;font-weight:700;line-height:1;letter-spacing:-.02em;}
+  .zbig .u{font-size:14px;color:var(--muted);}
+  .verdict{font-size:13px;font-weight:600;padding:3px 10px;border-radius:20px;display:inline-block;}
+  .v-deep{background:var(--red-bg);color:var(--red);}
+  .v-mid{background:rgba(191,125,22,.12);color:var(--amber);}
+  .v-shallow{background:var(--card2);color:var(--ink2);}
+  .kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:3px 0;}
+  .kv .k{color:var(--muted);} .kv .v{font-family:var(--mono);}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line);}
+  th{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+  th:first-child,td:first-child{text-align:left;}
+  td.mono{font-family:var(--mono);}
+  tr.hit{background:var(--brand-soft);}
+  tr.hit td{font-weight:600;}
+  .pos{color:var(--green);} .neg{color:var(--red);}
+
+  #chart{position:relative;width:100%;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--r);padding:10px 6px 4px;}
+  canvas{display:block;width:100%;}
+  #tip{position:absolute;pointer-events:none;background:rgba(29,28,26,.94);color:#fff;
+    font-size:12px;line-height:1.5;padding:7px 10px;border-radius:6px;display:none;z-index:9;
+    font-family:var(--mono);white-space:nowrap;}
+  .note{font-size:12.5px;color:var(--ink2);line-height:1.75;background:var(--card);
+    border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-top:16px;}
+  .note b{color:var(--ink);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;}
+  @media(max-width:860px){.grid2{grid-template-columns:1fr;}}
+</style>
+
+<div class="wrap">
+  <div class="head">
+    <div>
+      <div class="eyebrow">Volatility Probability Cone</div>
+      <h1>A股期权 · 波动概率锥</h1>
+      <div class="sub">用期权 IV 把跌幅换算成 σ · 判断当前位置够不够深 · 给出可挂单的各层锥位</div>
+    </div>
+    <div class="tabs" id="tabs"></div>
+  </div>
+
+  <div class="bar">
+    <span>锚点</span>
+    <span class="seg" id="anchorSeg">
+      <button data-a="auto" class="on">60日高点</button>
+      <button data-a="pick">图上点选</button>
+    </span>
+    <span>下沿用</span>
+    <span class="seg" id="ivSeg">
+      <button data-v="atm" class="on">ATM IV</button>
+      <button data-v="put">25Δ put IV</button>
+    </span>
+    <label class="ck"><input type="checkbox" id="tgFwd" checked> 前瞻锥（未来20日）</label>
+    <span id="hint" style="color:var(--muted)"></span>
+  </div>
+
+  <div class="hero">
+    <div class="card">
+      <h3>当前位置</h3>
+      <div class="zbig"><span class="v" id="zv">—</span><span class="u">σ</span>
+        <span id="verdict" class="verdict v-shallow">—</span></div>
+      <div class="kv"><span class="k">日期</span><span class="v" id="kDate">—</span></div>
+      <div class="kv"><span class="k">现价</span><span class="v" id="kPx">—</span></div>
+      <div class="kv"><span class="k">锚点</span><span class="v" id="kAnchor">—</span></div>
+      <div class="kv"><span class="k">已跌 / 已过</span><span class="v" id="kDd">—</span></div>
+      <div class="kv"><span class="k">锚点 IV → σ</span><span class="v" id="kSig">—</span></div>
+      <div class="kv"><span class="k">恐慌度</span><span class="v" id="kPanic">—</span></div>
+    </div>
+    <div class="card">
+      <h3>锥位 · 还要跌多少才到 · 该层历史表现（未来20日）</h3>
+      <table id="levels"><thead><tr>
+        <th>层</th><th>价位</th><th>距现价</th><th>n</th><th>均值</th><th>胜率</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <div id="chart"><canvas id="cv"></canvas><div id="tip"></div></div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>本标的 · 分层前瞻统计</h3>
+      <table id="stSelf"><thead><tr><th>层</th><th>n</th><th>5日</th><th>10日</th><th>20日</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="card">
+      <h3>四标的池化 · 分层前瞻统计</h3>
+      <table id="stPool"><thead><tr><th>层</th><th>n</th><th>5日</th><th>10日</th><th>20日</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>锥怎么算</b>：锚点取过去 60 日最高收盘（要求距今 ≥3 个交易日，锥才张得开），
+    σ(t) = IV<sub>锚点</sub> × √(已过交易日/252)，z = (现价/锚点价 − 1) / σ(t)。
+    用<b>锚点当日</b>的 IV、不用今天的，所以无前视——这就是"当时的期权市场认为一个月能波动多少"。<br>
+    <b>为什么看 σ 不看跌幅</b>：同一轮里科创50 跌 23% 只到 −1.10σ（锚点 IV 60.7%、σ=20.9%），
+    中证1000 跌 13.3% 却已到 −1.55σ（锚点 IV 25.7%、σ=8.6%）。按绝对跌幅挑会挑错标的。<br>
+    <b>−1σ 到 −0.5σ 是"半山腰"</b>：池化 3714 天里这一档是<b>唯一为负</b>的（20日均值 −0.13%、胜率 42%），
+    比不动还差。真正的分水岭在 −1.5σ，那以下才稳定为正（胜率 61%+）；≤−2.5σ 时 20日均值 +8.4%、胜率 94%（n=31）。<br>
+    <b>浅锥看恐慌、深锥看位置</b>：z≤−1σ 时恐慌度≥0.7 的胜率 62% vs &lt;0.7 的 47%，过滤有效；
+    但到 z≤−2σ 反转（68% vs 79%，n=47）——跌到 −2σ 本身已是充分条件，再叠加恐慌门会滤掉最好的机会。<br>
+    <b>已知局限</b>：σ 归一在统计上<b>并未跑赢</b>信号台现有的 mom_pct 闸门（各取最极端 15%：均值 +2.57% vs +2.60%、胜率 55% vs 57%）。
+    它的价值是给出<b>可执行价位</b>而非又一个信号——分位数没法挂单，锥位可以。
+    另：≤−2.5σ 仅 31 个样本且集中在少数几轮行情，胜率 94% 不可当作稳定预期。
+    <b>25Δ put IV</b> 选项把下沿换成偏斜后的波动率（下跌时更高、锥更宽更保守），未做独立验证，仅供对照。
+    表中带 <span style="color:var(--amber)">*</span> 的行样本不足 40 天，数值已置灰，不要当稳定预期。
+  </div>
+</div>
+
+<script>
+const DATA = /*__CONE_DATA__*/;
+const META = DATA._meta, POOL = DATA._pooled;
+const KEYS = Object.keys(DATA).filter(k => !k.startsWith('_'));
+const LV = [0.5, 1, 1.5, 2, 2.5];
+let curKey = KEYS[0], D = null, ANCHOR = 'auto', pickI = null, IVMODE = 'atm', SHOWFWD = true;
+let hoverI = -1, LAYOUT = null;
+
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const chart = document.getElementById('chart'), tip = document.getElementById('tip');
+
+function fmtP(v){ return v >= 100 ? v.toFixed(1) : v.toFixed(3); }
+function pct(v, nd){ return (v * 100).toFixed(nd === undefined ? 1 : nd) + '%'; }
+function fmtD(s){ return s.slice(0,4) + '-' + s.slice(4,6) + '-' + s.slice(6,8); }
+
+/* 当前生效的锚点下标: 自动=数据里的 anchor, 点选=用户指定 */
+function anchorOf(i){
+  if(ANCHOR === 'pick' && pickI != null && pickI < i) return pickI;
+  return D.anchor[i];
+}
+/* 下沿用的 IV: ATM 或 25Δ put(缺失回落到 ATM) */
+function ivAt(j){
+  if(IVMODE === 'put' && D.iv_put[j] != null) return D.iv_put[j];
+  return D.iv[j];
+}
+function sigmaAt(i){
+  const j = anchorOf(i);
+  if(j == null || i - j < META.min_days) return null;
+  return ivAt(j) * Math.sqrt((i - j) / 252);
+}
+function zAt(i){
+  const j = anchorOf(i), s = sigmaAt(i);
+  if(j == null || s == null || !D.price[i] || !D.price[j]) return null;
+  return (D.price[i] / D.price[j] - 1) / s;
+}
+
+function bandOf(z){
+  if(z == null) return null;
+  if(z <= -2.5) return '≤-2.5σ';
+  if(z <= -2) return '-2.5~-2σ';
+  if(z <= -1.5) return '-2~-1.5σ';
+  if(z <= -1) return '-1.5~-1σ';
+  if(z <= -0.5) return '-1~-0.5σ';
+  return '>-0.5σ';
+}
+
+/* ---------- tabs ---------- */
+const tabs = document.getElementById('tabs');
+KEYS.forEach(k => {
+  const b = document.createElement('button');
+  b.textContent = DATA[k].name; b.dataset.k = k;
+  b.onclick = () => { curKey = k; pickI = null; select(); };
+  tabs.appendChild(b);
+});
+document.getElementById('anchorSeg').onclick = e => {
+  const b = e.target.closest('button'); if(!b) return;
+  ANCHOR = b.dataset.a;
+  document.querySelectorAll('#anchorSeg button').forEach(x => x.classList.toggle('on', x === b));
+  document.getElementById('hint').textContent =
+    ANCHOR === 'pick' ? (pickI == null ? '← 在图上点一个高点作锚' : '') : '';
+  render();
+};
+document.getElementById('ivSeg').onclick = e => {
+  const b = e.target.closest('button'); if(!b) return;
+  IVMODE = b.dataset.v;
+  document.querySelectorAll('#ivSeg button').forEach(x => x.classList.toggle('on', x === b));
+  render();
+};
+document.getElementById('tgFwd').onchange = e => { SHOWFWD = e.target.checked; render(); };
+
+function select(){
+  D = DATA[curKey];
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.k === curKey));
+  tip.style.display = 'none'; hoverI = -1;   // 切标的要清掉上一个标的的悬浮读数
+  render();
+}
+
+/* ---------- 只画最近 N 天, 锥才看得清 ---------- */
+const WINDOW = 150;
+function viewRange(){
+  const n = D.dates.length, e = n - 1, j = anchorOf(e);
+  // 视窗要包住锚点并留出前置上下文, 否则锥的顶点被截掉
+  let s = Math.max(0, e - WINDOW + 1);
+  if(j != null) s = Math.min(s, Math.max(0, j - 15));
+  return { s, e };
+}
+
+function render(){
+  const n = D.dates.length, i = n - 1;
+  const j = anchorOf(i), s = sigmaAt(i), z = zAt(i);
+
+  /* --- 当前位置卡 --- */
+  document.getElementById('zv').textContent = z == null ? '—' : z.toFixed(2);
+  const vd = document.getElementById('verdict');
+  if(z == null){ vd.className = 'verdict v-shallow'; vd.textContent = '—'; }
+  else if(z <= -1.5){ vd.className = 'verdict v-deep'; vd.textContent = '深锥 · 位置够'; }
+  else if(z <= -1){ vd.className = 'verdict v-mid'; vd.textContent = '刚过 -1σ'; }
+  else { vd.className = 'verdict v-shallow'; vd.textContent = '半山腰 · 未到位'; }
+
+  document.getElementById('kDate').textContent = fmtD(D.dates[i]);
+  document.getElementById('kPx').textContent = fmtP(D.price[i]);
+  document.getElementById('kAnchor').textContent =
+    j == null ? '—' : fmtD(D.dates[j]) + ' @ ' + fmtP(D.price[j]);
+  document.getElementById('kDd').textContent =
+    j == null ? '—' : pct(D.price[i] / D.price[j] - 1) + ' / ' + (i - j) + ' 日';
+  document.getElementById('kSig').textContent =
+    j == null ? '—' : pct(ivAt(j)) + ' → ' + pct(s);
+  document.getElementById('kPanic').textContent =
+    D.panic[i] == null ? '—' : D.panic[i].toFixed(2);
+
+  /* --- 锥位表 --- */
+  const tb = document.querySelector('#levels tbody'); tb.innerHTML = '';
+  const curBand = bandOf(z);
+  LV.forEach(m => {
+    const price = (j == null || s == null) ? null : D.price[j] * (1 - m * s);
+    const gap = price == null ? null : price / D.price[i] - 1;
+    // 该锥位落在哪一档 -> 取该档统计
+    const st = (D.stats.find(x => x.band === bandOf(-m)) || {});
+    const tr = document.createElement('tr');
+    if(curBand === bandOf(-m)) tr.className = 'hit';
+    const mv = st.m20, wv = st.w20;
+    const thin = st.n20 != null && st.n20 < 40;   // 样本太薄, 胜率不可当稳定预期
+    tr.innerHTML =
+      `<td>-${m}σ</td><td class="mono">${price == null ? '—' : fmtP(price)}</td>` +
+      `<td class="mono ${gap != null && gap < 0 ? 'neg' : ''}">${gap == null ? '—' : pct(gap)}</td>` +
+      `<td class="mono">${st.n20 || '—'}${thin ? '<span title="样本不足40, 仅供参考" style="color:var(--amber)">*</span>' : ''}</td>` +
+      `<td class="mono ${mv == null ? '' : (mv > 0 ? 'pos' : 'neg')}"${thin ? ' style="opacity:.55"' : ''}>${mv == null ? '—' : pct(mv, 2)}</td>` +
+      `<td class="mono"${thin ? ' style="opacity:.55"' : ''}>${wv == null ? '—' : pct(wv, 0)}</td>`;
+    tb.appendChild(tr);
+  });
+
+  fillStats('#stSelf tbody', D.stats);
+  fillStats('#stPool tbody', POOL);
+  resize();
+}
+
+function fillStats(sel, rows){
+  const tb = document.querySelector(sel); tb.innerHTML = '';
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    const thin = (r.n20 || 0) < 40;
+    let h = `<td>${r.band}</td><td class="mono">${r.n20 || 0}` +
+            `${thin ? '<span style="color:var(--amber)">*</span>' : ''}</td>`;
+    [5, 10, 20].forEach(k => {
+      const m = r['m' + k], w = r['w' + k];
+      h += `<td class="mono ${m == null ? '' : (m > 0 ? 'pos' : 'neg')}"${thin ? ' style="opacity:.55"' : ''}>` +
+           `${m == null ? '—' : pct(m, 1) + '<span style="color:var(--muted)"> / ' + pct(w, 0) + '</span>'}</td>`;
+    });
+    tr.innerHTML = h; tb.appendChild(tr);
+  });
+}
+
+/* ---------- 画图 ---------- */
+const PADL = 56, PADR = 62, PADT = 14, PADB = 26;
+function resize(){
+  const w = chart.clientWidth - 12, h = 380;
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = w * dpr; cv.height = h * dpr;
+  cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw(w, h);
+}
+
+function draw(W, H){
+  ctx.clearRect(0, 0, W, H);
+  const { s: vs, e: ve } = viewRange();
+  const nView = ve - vs + 1;
+  const fwdN = SHOWFWD ? 20 : 0;
+  const total = nView + fwdN;
+
+  // 只画当前锚点那一把扇形(逐日重算会叠出一堆残段, 反而看不清)
+  const JA = anchorOf(ve), IVA = JA == null ? null : ivAt(JA);
+  const coneLv = d => {  // 锚点后第 d 个交易日, 各层锥位
+    const sg = IVA * Math.sqrt(Math.max(d, 0) / 252);
+    return m => D.price[JA] * (1 - m * sg);
+  };
+
+  // y 范围: 视窗价格 + 当前锥下沿 + 前瞻锥
+  let lo = Infinity, hi = -Infinity;
+  for(let i = vs; i <= ve; i++){
+    const p = D.price[i]; if(p == null) continue;
+    lo = Math.min(lo, p); hi = Math.max(hi, p);
+  }
+  if(JA != null){
+    lo = Math.min(lo, coneLv(ve - JA)(2.5));
+    hi = Math.max(hi, D.price[JA] * 1.02);
+  }
+  const last = D.price[ve], ivNow = ivAt(ve);
+  if(fwdN){
+    const sg = ivNow * Math.sqrt(fwdN / 252);
+    lo = Math.min(lo, last * (1 - 2 * sg)); hi = Math.max(hi, last * (1 + 2 * sg));
+  }
+  const pad = (hi - lo) * 0.05; lo -= pad; hi += pad;
+
+  const X = k => PADL + (W - PADL - PADR) * (k / Math.max(1, total - 1));
+  const Y = v => PADT + (H - PADT - PADB) * (1 - (v - lo) / (hi - lo));
+  LAYOUT = { X, Y, vs, ve, nView, total, lo, hi, W, H };
+
+  // 网格
+  ctx.strokeStyle = '#e3e0d9'; ctx.lineWidth = 1;
+  ctx.fillStyle = '#8b8880'; ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
+  ctx.textAlign = 'right';
+  for(let g = 0; g <= 4; g++){
+    const v = lo + (hi - lo) * g / 4, y = Y(v);
+    ctx.beginPath(); ctx.moveTo(PADL, y); ctx.lineTo(W - PADR, y); ctx.stroke();
+    ctx.fillText(fmtP(v), PADL - 6, y + 4);
+  }
+  // 日期轴
+  ctx.textAlign = 'center';
+  for(let k = 0; k < nView; k += Math.ceil(nView / 7)){
+    const d = D.dates[vs + k];
+    ctx.fillText(d.slice(2,4) + '-' + d.slice(4,6) + '-' + d.slice(6,8), X(k), H - 8);
+  }
+
+  // 回顾锥: 从当前锚点张开的一把扇形
+  if(JA != null && JA <= ve){
+    const k0 = Math.max(JA, vs) - vs, dEnd = ve - JA;
+    // 由外向内填充, 越深的层颜色越重
+    for(const [mo, mi, a] of [[2.5, 2, .05], [2, 1.5, .06], [1.5, 1, .07], [1, 0.5, .08]]){
+      ctx.beginPath();
+      for(let d = JA - vs < 0 ? vs - JA : 0; d <= dEnd; d++){
+        const x = X(JA - vs + d); if(x < X(k0) - 1) continue;
+        ctx.lineTo(x, Y(coneLv(d)(mo)));
+      }
+      for(let d = dEnd; d >= 0; d--){
+        const x = X(JA - vs + d); if(x < X(k0) - 1) continue;
+        ctx.lineTo(x, Y(coneLv(d)(mi)));
+      }
+      ctx.closePath(); ctx.fillStyle = 'rgba(192,57,43,' + a + ')'; ctx.fill();
+    }
+    ctx.font = '10.5px ' + getComputedStyle(document.body).fontFamily;
+    for(const m of LV){
+      ctx.beginPath();
+      for(let d = 0; d <= dEnd; d++){
+        const x = X(JA - vs + d), y = Y(coneLv(d)(m));
+        if(d === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = 'rgba(192,57,43,' + (m === 1 || m === 2 ? .6 : .3) + ')';
+      ctx.lineWidth = m === 1 ? 1.7 : 1;
+      if(m !== 1 && m !== 2) ctx.setLineDash([3, 3]);
+      ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(192,57,43,.8)'; ctx.textAlign = 'left';
+      ctx.fillText('-' + m + 'σ', X(nView - 1) + 3, Y(coneLv(dEnd)(m)) + 3);
+    }
+  }
+
+  // 前瞻锥: 从最后一天出发, sigma 随天数张开
+  if(fwdN){
+    for(const [m, up] of [[1, 1], [2, 1], [1, -1], [2, -1]]){
+      ctx.beginPath();
+      for(let dd = 0; dd <= fwdN; dd++){
+        const sg = ivNow * Math.sqrt(dd / 252);
+        const y = Y(last * (1 + up * m * sg)), x = X(nView - 1 + dd);
+        if(dd === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = up > 0 ? 'rgba(31,78,121,.4)' : 'rgba(192,57,43,.5)';
+      ctx.lineWidth = m === 1 ? 1.4 : 1; ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
+    }
+    // 分隔线 + 标注
+    ctx.strokeStyle = '#c9c5bc'; ctx.setLineDash([2, 3]);
+    ctx.beginPath(); ctx.moveTo(X(nView - 1), PADT); ctx.lineTo(X(nView - 1), H - PADB); ctx.stroke();
+    ctx.setLineDash([]);
+    const sg = ivNow * Math.sqrt(fwdN / 252);
+    ctx.fillStyle = 'rgba(192,57,43,.8)'; ctx.textAlign = 'left'; ctx.font = '10.5px ' + getComputedStyle(document.body).fontFamily;
+    ctx.fillText('20日 -1σ ' + fmtP(last * (1 - sg)), X(total - 1) - 2, Y(last * (1 - sg)) + 3);
+    ctx.fillText('-2σ ' + fmtP(last * (1 - 2 * sg)), X(total - 1) - 2, Y(last * (1 - 2 * sg)) + 3);
+  }
+
+  // 价格线
+  ctx.beginPath(); let st = false;
+  for(let i = vs; i <= ve; i++){
+    const p = D.price[i]; if(p == null){ st = false; continue; }
+    const x = X(i - vs), y = Y(p);
+    if(!st){ ctx.moveTo(x, y); st = true; } else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = '#1f4e79'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+
+  // 锚点标记
+  const ja = anchorOf(ve);
+  if(ja != null && ja >= vs){
+    ctx.beginPath(); ctx.arc(X(ja - vs), Y(D.price[ja]), 4.5, 0, 7);
+    ctx.fillStyle = '#bf7d16'; ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+  // 当前点
+  ctx.beginPath(); ctx.arc(X(nView - 1), Y(last), 4.5, 0, 7);
+  ctx.fillStyle = '#1f4e79'; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+}
+
+/* ---------- 交互 ---------- */
+chart.addEventListener('mousemove', e => {
+  if(!LAYOUT) return;
+  const r = cv.getBoundingClientRect(), mx = e.clientX - r.left;
+  const { X, vs, nView } = LAYOUT;
+  let best = -1, bd = 1e9;
+  for(let k = 0; k < nView; k++){ const d = Math.abs(X(k) - mx); if(d < bd){ bd = d; best = k; } }
+  if(best < 0){ tip.style.display = 'none'; return; }
+  const i = vs + best, z = zAt(i), j = anchorOf(i), sg = sigmaAt(i);
+  hoverI = i;
+  let h = fmtD(D.dates[i]) + '<br>价 ' + fmtP(D.price[i]);
+  if(z != null){
+    h += '<br>z = ' + z.toFixed(2) + 'σ  (' + bandOf(z) + ')';
+    h += '<br>锚 ' + fmtD(D.dates[j]) + ' @ ' + fmtP(D.price[j]);
+    h += '<br>σ ' + pct(sg) + '  已跌 ' + pct(D.price[i] / D.price[j] - 1);
+  } else h += '<br>锥未张开';
+  if(D.panic[i] != null) h += '<br>恐慌度 ' + D.panic[i].toFixed(2);
+  tip.innerHTML = h; tip.style.display = 'block';
+  const tw = tip.offsetWidth;
+  tip.style.left = Math.min(Math.max(4, mx - tw / 2), chart.clientWidth - tw - 8) + 'px';
+  tip.style.top = '14px';
+});
+chart.addEventListener('mouseleave', () => { tip.style.display = 'none'; hoverI = -1; });
+chart.addEventListener('click', () => {
+  if(ANCHOR !== 'pick' || hoverI < 0) return;
+  pickI = hoverI;
+  document.getElementById('hint').textContent = '锚点 ' + fmtD(D.dates[pickI]) + '（再点可改）';
+  render();
+});
+window.addEventListener('resize', () => resize());
+
+select();
+</script>

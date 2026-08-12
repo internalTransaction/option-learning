@@ -30,12 +30,14 @@ PROC = ROOT / "data" / "processed"
 REPORTS = ROOT / "reports"
 PY = sys.executable
 
-STEPS = ["build_gex.py", "build_timing_viz.py", "build_equity.py"]
+STEPS = ["build_gex.py", "build_timing_viz.py", "build_equity.py", "build_cone_viz.py"]
 INJECT = [
     ("timing_template.html", "timing_viz.json", "/*__TIMING_DATA__*/",
      "A股ETF期权_波动率择时信号台.html"),
     ("equity_template.html", "equity.json", "/*__EQUITY_DATA__*/",
      "A股ETF期权_策略净值超额.html"),
+    ("cone_template.html", "cone_viz.json", "/*__CONE_DATA__*/",
+     "A股期权_波动概率锥.html"),
 ]
 
 
