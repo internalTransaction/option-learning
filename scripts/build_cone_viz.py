@@ -3,6 +3,8 @@
 页面主体是 SOXX expected-move 那种锥: 以今天收盘为顶点, 用今天的 IV,
 向未来张开 P*(1 ± m*IV*sqrt(d/252))。回测则回答"在下沿挂买单管不管用":
 每天挂一单、H 日内有效、用日内最低价判成交, 统计成交率/成交后收益/还要再跌多少。
+H 按 5/10/20/60 各跑一份(对应页面的 1周/2周/1月/3月展望), 持有期 K 固定 20 日,
+这样"成交后20日"在四档之间可比, 只有成交率/等待/浮亏这些真正依赖 H 的跟着变。
 
 输出 data/processed/cone_viz.json:
   <key>.dates/open/high/low/price     历史 OHLC(price=收盘, 画蜡烛与判成交)
@@ -31,8 +33,9 @@ from src.utils.config import abspath
 PROC = abspath("data/processed")
 LOOKBACK = 60          # 高点锚定模式的回看窗口
 MIN_DAYS = 3
-H = 20                 # 挂单有效期(交易日)
-K = 20                 # 成交后持有天数
+# 挂单有效期(交易日): 每档各跑一遍, 页面按当前展望期取对应那份
+H_LIST = [5, 10, 20, 60]
+K = 20                 # 成交后持有天数, 固定不随 H 变 —— 这样"成交后20日"四档之间可比
 LEVELS = [0.5, 1.0, 1.5, 2.0]
 PANIC_GATE = 0.70
 
@@ -99,7 +102,7 @@ def build_one(key: str) -> pd.DataFrame:
     return df
 
 
-def simulate(df: pd.DataFrame, m: float) -> pd.DataFrame:
+def simulate(df: pd.DataFrame, m: float, H: int) -> pd.DataFrame:
     """每天在 -m σ 挂一单, H 日内有效, 日内最低价触及即成交。"""
     close = df["close"].to_numpy(float)
     low = df["low"].to_numpy(float)
@@ -148,10 +151,12 @@ def main() -> None:
         df = build_one(key)
         frames[key] = df
         bt, btp = {}, {}
-        for m in LEVELS:
-            res = simulate(df, m)
-            bt[str(m)] = summarize(res)
-            btp[str(m)] = summarize(res[res["panic"] >= PANIC_GATE])
+        for H in H_LIST:
+            bt[str(H)], btp[str(H)] = {}, {}
+            for m in LEVELS:
+                res = simulate(df, m, H)
+                bt[str(H)][str(m)] = summarize(res)
+                btp[str(H)][str(m)] = summarize(res[res["panic"] >= PANIC_GATE])
         out[key] = {
             "name": df["name"].iloc[0],
             "dates": [str(x) for x in df["date"]],
@@ -170,23 +175,28 @@ def main() -> None:
         }
         print(f"{key:7s} {df['name'].iloc[0]:10s} {len(df):5d} 天  "
               f"{df['date'].iloc[0]}->{df['date'].iloc[-1]}  "
-              f"成交率 -1σ {bt['1.0']['fill']:.0%} / -2σ {bt['2.0']['fill']:.0%}")
+              + "  ".join(f"H{H}:-1σ{bt[str(H)]['1.0']['fill']:.0%}" for H in H_LIST))
 
     pbt, pbtp = {}, {}
-    for m in LEVELS:
-        allres = pd.concat([simulate(df, m) for df in frames.values()], ignore_index=True)
-        pbt[str(m)] = summarize(allres)
-        pbtp[str(m)] = summarize(allres[allres["panic"] >= PANIC_GATE])
+    for H in H_LIST:
+        pbt[str(H)], pbtp[str(H)] = {}, {}
+        for m in LEVELS:
+            allres = pd.concat([simulate(df, m, H) for df in frames.values()], ignore_index=True)
+            pbt[str(H)][str(m)] = summarize(allres)
+            pbtp[str(H)][str(m)] = summarize(allres[allres["panic"] >= PANIC_GATE])
     out["_pooledBt"] = pbt
     out["_pooledBtPanic"] = pbtp
-    out["_meta"] = {"lookback": LOOKBACK, "min_days": MIN_DAYS, "H": H, "K": K,
+    out["_meta"] = {"lookback": LOOKBACK, "min_days": MIN_DAYS,
+                    "h_list": H_LIST, "K": K,
                     "levels": LEVELS, "panic_gate": PANIC_GATE,
                     "period_n": {"W": 5, "M": 21}}
 
     dest = PROC / "cone_viz.json"
     dest.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
-    print(f"\n池化(H={H},K={K}): " + "  ".join(
-        f"-{m}σ 成交{pbt[str(m)]['fill']:.0%}/收益{pbt[str(m)].get('ret', 0):+.1%}" for m in LEVELS))
+    for H in H_LIST:
+        print(f"池化 H={H:2d},K={K}: " + "  ".join(
+            f"-{m}σ 成交{pbt[str(H)][str(m)]['fill']:5.0%}/收益{pbt[str(H)][str(m)].get('ret', 0):+6.1%}"
+            for m in LEVELS))
     print(f"写出 {dest} ({dest.stat().st_size / 1024:.0f} KB)")
 
 

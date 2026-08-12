@@ -155,8 +155,9 @@
     P × (1 ± m·IV·√(d/252))，d 是未来第几个交易日。跟你看 SOXX expected move 是同一个口径，
     只是这里同时画 ±0.5/1/1.5/2σ 四层。切「25Δ put」会用偏斜后的波动率画下沿（更宽更保守）。<br>
 
-    <b>回测怎么做</b>：每天在 −mσ（H=20 日口径）挂一张买单、20 个交易日内有效，
-    <b>用日内最低价判成交</b>（触及即成交，不是收盘价），成交后持有 20 个交易日。
+    <b>回测怎么做</b>：每天在 −mσ 挂一张买单、<b>有效期跟着上面的展望期走</b>（1周/2周/1月/3月各跑了一份），
+    <b>用日内最低价判成交</b>（触及即成交，不是收盘价）。成交后<b>一律持有 20 个交易日</b>——
+    持有期不跟着展望期变，这样"成交后20日"这一列在四档之间可比，只有成交率／等待天数／浮亏这些真正依赖有效期的会变。
     池化四标的、共约 5000 个交易日。样本重叠严重（每天都挂单），
     所以胜率是<b>方向性参考而非独立试验</b>，深层尤其如此（−2σ 只有约 300 次成交）。<br>
 
@@ -237,9 +238,12 @@ function shownDays(){
   const a = apexI(), n = lastI();
   return Math.min(HORIZON + TAIL, n - a);
 }
+/* 回测按挂单有效期 H 各跑了一份, 取当前展望期对应那份(持有期 K 固定 20 日) */
 function btOf(){
-  const src = USE_PANIC ? 'bt_panic' : 'bt';
-  return { self: D[src], pool: USE_PANIC ? DATA._pooledBtPanic : DATA._pooledBt };
+  const h = String(HORIZON);
+  const self = (USE_PANIC ? D.bt_panic : D.bt)[h] || {};
+  const pool = (USE_PANIC ? DATA._pooledBtPanic : DATA._pooledBt)[h] || {};
+  return { self, pool };
 }
 /* JSON 键由 Python str(float) 生成("1.0"), JS String(1.0) 得 "1", 必须对齐 */
 function bkey(m){ return m.toFixed(1); }
@@ -336,8 +340,7 @@ function render(){
   LEVELS.forEach(m => {
     const s = bt.self[bkey(m)] || {}, p = bt.pool[bkey(m)] || {};
     const price = limitPx(m), gap = price / D.price[a] - 1;
-    // 回测只跑了 H=20 口径, 换展望期后这几列不再对应
-    const dim = HORIZON === META.H ? '' : ' style="opacity:.4"';
+    const dim = '';   // 各展望期都有自己的回测, 不再需要置灰
     const thin = (s.n_fill || 0) < 40;
     const g = (v, f) => v == null ? '—' : f(v);
     let hitCell;
@@ -398,13 +401,10 @@ function render(){
 }
 
 function updateHint(){
-  const offH = HORIZON !== META.H;
   const deg = LAYOUT && LAYOUT.degraded
     ? '<span style="color:var(--muted)">（区间太长，蜡烛已自动退回线）</span>' : '';
-  document.getElementById('hint').innerHTML = deg + (offH
-    ? '<span style="color:var(--amber)">回测统计列固定 1 月口径，与当前展望期不符（已置灰）；'
-      + '挂单价与"当时是否成交"已按当前展望期计算</span>'
-    : (isPast() ? '' : '（锥顶点在今天，"锥后再看"要拉回历史才有内容）'));
+  document.getElementById('hint').innerHTML = deg +
+    (isPast() ? '' : '（锥顶点在今天，"锥后再看"要拉回历史才有内容）');
 }
 
 /* ---------- 绘图 ---------- */
