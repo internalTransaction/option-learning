@@ -22,3 +22,6 @@ config/tushare_token.txt
 
 # polygon 代理 key(私密)
 config/polygon_key.txt
+
+# 部署产物(由 build_site.py 从 reports/ 生成)
+site/

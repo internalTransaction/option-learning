@@ -76,7 +76,7 @@
   <div class="entry">
     <a href="A股ETF期权_波动率择时信号台.html">
       <div class="t">① 波动率择时信号台 →</div>
-      <div class="d">主图价格 + 6个分位副图 + GEX + 建议仓位 + <b>今日期权动作提示</b>；十字光标逐日读数；恐慌灯/melt-up触发带。每天看该拿多少仓、做什么期权动作。</div>
+      <div class="d">主图价格 + 分位副图(含 GEX、vol-of-vol、隐含相关性) + <b>今日期权动作提示</b>；十字光标逐日读数；恐慌灯/melt-up 触发带、阴跌未出清警告。</div>
       <div class="go">4标的 · 924以来/全部可切</div></a>
     <a href="A股ETF期权_策略净值超额.html">
       <div class="t">② 策略净值与择时超额 →</div>
@@ -84,12 +84,20 @@
       <div class="go">含5bps成本 · IR信息比率</div></a>
     <a href="A股期权_波动概率锥.html">
       <div class="t">③ 波动概率锥 →</div>
-      <div class="d">用期权 IV 把跌幅换算成 σ：从高点锚定、锥随天数张开，看<b>当前跌到第几层</b>，并给出 −1σ/−1.5σ/−2σ 的<b>可挂单价位</b>。防止抄在半山腰（−1σ~−0.5σ 是唯一负收益档）。</div>
-      <div class="go">4标的 · 锚点可点选 · 含前瞻锥</div></a>
+      <div class="d">SOXX expected-move 口径的<b>前瞻锥</b>：从今天用 IV 张开，给出 −0.5/1/1.5/2σ 的<b>可挂单价位</b>；顶点可拉回历史看当时的锥与后来实际走势。附挂单回测——<b>抄不到底，但配恐慌门能买得便宜</b>。</div>
+      <div class="go">4标的 · 展望1周~3月 · 蜡烛图</div></a>
+    <a href="美股指数期权_波动率择时信号台_合并.html">
+      <div class="t">④ 美股信号台(SPY/QQQ/SOXX) →</div>
+      <div class="d">A股恐慌五灯框架在美股的复现，<b>日线/小时可切</b>；IV/情绪比/RR/斜率/VRP/PCR/VVIX/凸度/下行VRP/SKEW 分位副图，可切原值。观察式仪表盘。</div>
+      <div class="go">Polygon 数据 · 另有<span style="opacity:.7">日线/盘中分版</span></div></a>
     <a href="A股股指ETF期权恐慌择时警告_研究总结.html">
-      <div class="t">④ 恐慌择时警告 · 研究总结 →</div>
+      <div class="t">⑤ 恐慌择时警告 · 研究总结 →</div>
       <div class="d">五灯极值口径、灯数×回撤分档、924后回撤事件复盘的早期研究总结。</div>
       <div class="go">研究依据 · 口径来源</div></a>
+    <a href="期权抄底凸性策略_框架与证据边界.html">
+      <div class="t">⑥ 纯期权抄底凸性策略 →</div>
+      <div class="d">恐慌灯买 call / 价差的加仓腿：质量门 panic≥0.70 是决定性的，以及这套证据到哪儿为止。</div>
+      <div class="go">框架 + 证据边界</div></a>
   </div>
 
   <h2>逻辑链条 · 六步 + 依据</h2>
