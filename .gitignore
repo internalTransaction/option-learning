@@ -17,5 +17,9 @@ venv/
 # OS
 .DS_Store
 
+# 生产机运行日志与本地回滚副本
+logs/
+*.bak*
+
 # tushare token(私密)
 config/tushare_token.txt
